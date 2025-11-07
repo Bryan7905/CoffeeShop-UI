@@ -1,54 +1,44 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 
-// Customer List Page
-const CustomerListPage = ({ navigate, customers }) => {
-  
-  // Calculate loyalty status for display
-  const customersWithLoyalty = useMemo(() => {
-    // CLASS TOPIC: Arrays (Mapping to create a new array)
-    return customers.map(customer => {
-      // Re-use the discount logic
-      const { loyalty } = getDiscountRate(customer.transactions);
-      return {
-        ...customer,
-        loyalty,
-      };
-    });
-  }, [customers]);
+const CustomersPage = ({ navigate, customers = [], setCustomers }) => {
+  const handleDelete = (id) => {
+    if (!window.confirm('Delete this customer?')) return;
+    setCustomers(prev => prev.filter(c => c.id !== id));
+  };
 
   return (
-    <div className="page-container">
-      <h2>👥 Customer List</h2>
-      <button className="button" onClick={() => navigate('home')}>🏠 Back to Home</button>
-      <button className="button" onClick={() => navigate('order')}>🛒 Back to Order</button>
-      
-      <hr style={{margin: '20px 0', borderTop: '1px solid #D9CFC7'}} />
+    <div style={{ padding: 20 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h2>Customers</h2>
+        <div>
+          <button className="button" onClick={() => navigate('home')}>Back</button>
+          <button className="button" onClick={() => navigate('order')}>Open POS</button>
+        </div>
+      </div>
 
-      {/* CLASS TOPIC: While Loop (The display logic can be conceptually replaced by a while loop iterating through the array) */}
-      {/* While(i < customersWithLoyalty.length) { render_customer(customersWithLoyalty[i++]) } */}
-      {customersWithLoyalty.length === 0 ? (
-        <p>No customers found.</p>
+      {customers.length === 0 ? (
+        <div style={{ marginTop: 20, color: '#666' }}>No customers found.</div>
       ) : (
-        // CLASS TOPIC: Arrays (Used to iterate and display the list)
-        <table>
+        <table style={{ width: '100%', marginTop: 12, borderCollapse: 'collapse' }}>
           <thead>
-            <tr>
-              <th>ID</th>
-              <th>Full Name</th>
-              <th>Contact Info</th>
-              <th>Transactions</th>
-              <th>Loyalty Status</th>
+            <tr style={{ textAlign: 'left', borderBottom: '1px solid #ddd' }}>
+              <th style={{ padding: '8px 4px' }}>ID</th>
+              <th>Name</th>
+              <th>Contact</th>
+              <th>Visits</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
-            {customersWithLoyalty.map((customer) => (
-              <tr key={customer.id}>
-                <td>{customer.id}</td>
-                <td>{customer.name}</td>
-                <td>{customer.contact}</td>
-                <td>{customer.transactions}</td>
-                {/* CLASS TOPIC: Conditional Statement (Loyalty status display) */}
-                <td><strong>{customer.loyalty}</strong></td>
+            {customers.map(c => (
+              <tr key={c.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
+                <td style={{ padding: '8px 4px' }}>{c.id}</td>
+                <td>{c.name}</td>
+                <td>{c.contact}</td>
+                <td>{c.transactions ?? 0}</td>
+                <td style={{ textAlign: 'right' }}>
+                  <button className="button small" onClick={() => handleDelete(c.id)}>Delete</button>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -58,13 +48,4 @@ const CustomerListPage = ({ navigate, customers }) => {
   );
 };
 
-// Re-using the logic from OrderPage for consistency
-const getDiscountRate = (transactions) => {
-  if (transactions >= 26) return { discount: 0.25, loyalty: 'Diamond' };
-  if (transactions >= 16) return { discount: 0.20, loyalty: 'Platinum' };
-  if (transactions >= 11) return { discount: 0.10, loyalty: 'Gold' };
-  if (transactions >= 6) return { discount: 0.05, loyalty: 'Silver' };
-  return { discount: 0.0, loyalty: 'Basic' };
-};
-
-export default CustomerListPage;
+export default CustomersPage;
