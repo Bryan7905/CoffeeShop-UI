@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import OrderPage from './pages/OrderPage';
 import CustomersPage from './pages/CustomerListPage';
 import api from './api';
+import api from './api';
 import './App.css';
 
 export default function App() {
@@ -57,12 +58,13 @@ export default function App() {
       // prefer server returned object; if server omitted id, fall back below
       if (saved && saved.id != null) {
         setCustomers(prev => (Array.isArray(prev) ? [...prev, saved] : [saved]));
+        setCustomers(prev => (Array.isArray(prev) ? [...prev, saved] : [saved]));
         setNextCustomerId(prev => Math.max(prev, saved.id + 1));
+        return saved;
         return saved;
       }
       // if server returned something without id, continue to fallback logic
     }
-    // fallback local-only behavior
     const newId = nextCustomerId;
     const newCust = { id: newId, name: payload.name, contact: payload.contact, transactions: 0 };
     setCustomers(prev => [...prev, newCust]);
@@ -75,7 +77,9 @@ export default function App() {
       const saved = await api.createTransaction(payload);
       if (saved && saved.id != null) {
         setTransactions(prev => (Array.isArray(prev) ? [...prev, saved] : [saved]));
+        setTransactions(prev => (Array.isArray(prev) ? [...prev, saved] : [saved]));
         setNextTransactionId(prev => Math.max(prev, saved.id + 1));
+        return saved;
         return saved;
       }
       // if server returned something without id, fall back to local id below
