@@ -1,11 +1,35 @@
 import React, { useEffect, useState } from 'react';
 import api from '../api';
 
+const safeDisplay = (val) => {
+  if (val === null || val === undefined) return '';
+  if (typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean') return val;
+  // For objects/arrays, stringify so React doesn't try to render them directly
+  try {
+    return JSON.stringify(val);
+  } catch (e) {
+    return String(val);
+  }
+};
+
+const looksLikeTransaction = (obj) =>
+  obj && typeof obj === 'object' && 'items' in obj && 'total' in obj && 'finalTotal' in obj;
+
 const CustomerListPage = ({ navigate, customers = [], setCustomers }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  console.log('CustomerListPage render — customers:', customers);
+  // Helpful runtime check: log unexpected shapes so you can diagnose API issues quickly
+  useEffect(() => {
+    if (!Array.isArray(customers)) {
+      console.warn('CustomerListPage expected customers to be an array but got:', customers);
+      return;
+    }
+    const bad = customers.find(c => looksLikeTransaction(c));
+    if (bad) {
+      console.warn('CustomerListPage: at least one entry looks like a transaction object (not a customer):', bad);
+    }
+  }, [customers]);
 
   // Load latest customers from backend when this page mounts.
   useEffect(() => {
@@ -18,7 +42,14 @@ const CustomerListPage = ({ navigate, customers = [], setCustomers }) => {
         if (api && typeof api.listCustomers === 'function') {
           const cs = await api.listCustomers();
           if (!mounted) return;
-          setCustomers(Array.isArray(cs) ? cs : []);
+          // Defensive: if API returned something unexpected, keep UI stable and log
+          if (!Array.isArray(cs)) {
+            console.warn('API returned non-array for listCustomers:', cs);
+            setError('Server returned unexpected data for customers.');
+            setCustomers([]);
+            return;
+          }
+          setCustomers(cs);
         }
       } catch (err) {
         console.warn('Failed to load customers from API', err);
@@ -62,7 +93,13 @@ const CustomerListPage = ({ navigate, customers = [], setCustomers }) => {
     try {
       if (api && typeof api.listCustomers === 'function') {
         const cs = await api.listCustomers();
-        setCustomers(Array.isArray(cs) ? cs : []);
+        if (!Array.isArray(cs)) {
+          console.warn('API returned non-array for listCustomers on refresh:', cs);
+          setError('Server returned unexpected data for customers.');
+          setCustomers([]);
+        } else {
+          setCustomers(cs);
+        }
       }
     } catch (err) {
       console.warn('Failed to refresh customers from API', err);
@@ -89,6 +126,8 @@ const CustomerListPage = ({ navigate, customers = [], setCustomers }) => {
 
       {loading && !customers.length ? (
         <div style={{ marginTop: 20, color: '#666' }}>Loading customers...</div>
+      ) : !Array.isArray(customers) ? (
+        <div style={{ marginTop: 20, color: 'red' }}>Unexpected customer data. See console.</div>
       ) : customers.length === 0 ? (
         <div style={{ marginTop: 20, color: '#666' }}>No customers found.</div>
       ) : (
@@ -104,11 +143,11 @@ const CustomerListPage = ({ navigate, customers = [], setCustomers }) => {
           </thead>
           <tbody>
             {customers.map(c => (
-              <tr key={c.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
-                <td style={{ padding: '8px 4px' }}>{c.id}</td>
-                <td>{c.name}</td>
-                <td>{c.contact}</td>
-                <td>{c.transactions ?? 0}</td>
+              <tr key={typeof c === 'object' && c !== null ? (c.id ?? JSON.stringify(c)) : String(c)} style={{ borderBottom: '1px solid #f0f0f0' }}>
+                <td style={{ padding: '8px 4px' }}>{safeDisplay(c.id)}</td>
+                <td>{safeDisplay(c.name)}</td>
+                <td>{safeDisplay(c.contact)}</td>
+                <td>{safeDisplay(c.transactions ?? 0)}</td>
                 <td style={{ textAlign: 'right' }}>
                   <button
                     className="button small"
