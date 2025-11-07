@@ -1,11 +1,75 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import api from '../api';
 
 const CustomerListPage = ({ navigate, customers = [], setCustomers }) => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
   console.log('CustomerListPage render — customers:', customers);
 
-  const handleDelete = (id) => {
+  // Load latest customers from backend when this page mounts.
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      if (!setCustomers) return; // nothing to update in parent
+      setLoading(true);
+      setError('');
+      try {
+        if (api && typeof api.listCustomers === 'function') {
+          const cs = await api.listCustomers();
+          if (!mounted) return;
+          setCustomers(Array.isArray(cs) ? cs : []);
+        }
+      } catch (err) {
+        console.warn('Failed to load customers from API', err);
+        if (mounted) setError('Failed loading customers from server');
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+    load();
+    return () => {
+      mounted = false;
+    };
+  }, [setCustomers]);
+
+  const handleDelete = async (id) => {
     if (!window.confirm('Delete this customer?')) return;
-    setCustomers(prev => prev.filter(c => c.id !== id));
+
+    // Try deleting on server first; if API not available, fall back to local-only removal
+    if (api && typeof api.deleteCustomer === 'function') {
+      try {
+        setLoading(true);
+        await api.deleteCustomer(id);
+        // update parent state
+        if (setCustomers) setCustomers(prev => prev.filter(c => c.id !== id));
+      } catch (err) {
+        console.error('Failed to delete customer via API', err);
+        alert('Could not delete customer on server. See console for details.');
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      // fallback local-only remove
+      if (setCustomers) setCustomers(prev => prev.filter(c => c.id !== id));
+    }
+  };
+
+  const handleRefresh = async () => {
+    if (!setCustomers) return;
+    setLoading(true);
+    setError('');
+    try {
+      if (api && typeof api.listCustomers === 'function') {
+        const cs = await api.listCustomers();
+        setCustomers(Array.isArray(cs) ? cs : []);
+      }
+    } catch (err) {
+      console.warn('Failed to refresh customers from API', err);
+      setError('Failed refreshing customers');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -15,10 +79,17 @@ const CustomerListPage = ({ navigate, customers = [], setCustomers }) => {
         <div>
           <button className="button" onClick={() => navigate('home')}>Back</button>
           <button className="button" onClick={() => navigate('order')}>Open POS</button>
+          <button className="button" onClick={handleRefresh} disabled={loading} style={{ marginLeft: 8 }}>
+            {loading ? 'Refreshing...' : 'Refresh'}
+          </button>
         </div>
       </div>
 
-      {customers.length === 0 ? (
+      {error && <div style={{ color: 'red', marginTop: 12 }}>{error}</div>}
+
+      {loading && !customers.length ? (
+        <div style={{ marginTop: 20, color: '#666' }}>Loading customers...</div>
+      ) : customers.length === 0 ? (
         <div style={{ marginTop: 20, color: '#666' }}>No customers found.</div>
       ) : (
         <table style={{ width: '100%', marginTop: 12, borderCollapse: 'collapse' }}>
@@ -39,7 +110,13 @@ const CustomerListPage = ({ navigate, customers = [], setCustomers }) => {
                 <td>{c.contact}</td>
                 <td>{c.transactions ?? 0}</td>
                 <td style={{ textAlign: 'right' }}>
-                  <button className="button small" onClick={() => handleDelete(c.id)}>Delete</button>
+                  <button
+                    className="button small"
+                    onClick={() => handleDelete(c.id)}
+                    disabled={loading}
+                  >
+                    Delete
+                  </button>
                 </td>
               </tr>
             ))}
