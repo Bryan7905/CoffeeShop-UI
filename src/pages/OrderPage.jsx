@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import api from '../api'; // use direct API for customer / transaction fetch/update when needed
 
 // Menu data - unchanged from your design
 const MENU_ITEMS_DATA = {
@@ -108,6 +109,7 @@ const OrderPage = ({
   const [showNewCustomerModal, setShowNewCustomerModal] = useState(false);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [registeringCustomer, setRegisteringCustomer] = useState(false);
+  const [savingTransaction, setSavingTransaction] = useState(false);
 
   const handleCreateCustomerAndUse = async (name, contact) => {
     if (!createCustomer) throw new Error('No createCustomer function provided');
@@ -116,7 +118,7 @@ const OrderPage = ({
 
   const handleCustomerSearch = () => {
     const id = parseInt(customerIdInput);
-    const customer = customers.find(c => c.id === id);
+    const customer = Array.isArray(customers) ? customers.find(c => c.id === id) : null;
     if (customer) {
       setCurrentCustomer(customer);
       setReceipt(null);
@@ -134,6 +136,7 @@ const OrderPage = ({
     setRegisteringCustomer(true);
     try {
       if (typeof createCustomer === 'function') {
+        // Persist via App wrapper (which calls API) and use returned object when available
         const created = await handleCreateCustomerAndUse(newCustomer.name.trim(), newCustomer.contact.trim());
         const assignedId = (created && created.id != null) ? created.id : nextCustomerId;
         const customerToAdd = (created && created.id != null) ? created : {
@@ -142,11 +145,13 @@ const OrderPage = ({
           contact: newCustomer.contact,
           transactions: 0
         };
+
         setCustomers(prev => Array.isArray(prev) ? [...prev, customerToAdd] : [customerToAdd]);
         setCurrentCustomer(customerToAdd);
         setCustomerIdInput(String(assignedId));
         if (nextCustomerId <= assignedId) setNextCustomerId(assignedId + 1);
       } else {
+        // local fallback (shouldn't be used when API is configured)
         const newId = nextCustomerId;
         const newCust = { id: newId, name: newCustomer.name, contact: newCustomer.contact, transactions: 0 };
         setCustomers(prev => [...prev, newCust]);
@@ -158,6 +163,7 @@ const OrderPage = ({
       setShowNewCustomerModal(false);
     } catch (err) {
       console.error('Error during customer registration:', err);
+      alert('Failed to register customer. See console for details.');
     } finally {
       setRegisteringCustomer(false);
     }
@@ -216,10 +222,13 @@ const OrderPage = ({
     }
   };
 
-  const generateReceipt = (paid, change) => {
-    if (!currentCustomer) { console.error("Please select a customer first."); return; }
-    if (orderItems.length === 0) { console.error("Order is empty."); return; }
+  const generateReceipt = async (paid, change) => {
+    if (!currentCustomer) { console.error("Please select a customer first."); alert("Please select a customer first."); return; }
+    if (orderItems.length === 0) { console.error("Order is empty."); alert("Order is empty."); return; }
 
+    setSavingTransaction(true);
+
+    // Optimistically update customer visits locally; we'll refresh from server if possible
     const updatedCustomer = { ...currentCustomer, transactions: (currentCustomer.transactions || 0) + 1 };
     setCustomers(prev => prev.map(c => c.id === currentCustomer.id ? updatedCustomer : c));
     setCurrentCustomer(updatedCustomer);
@@ -232,27 +241,62 @@ const OrderPage = ({
       finalTotal: finalAmount,
     };
 
-    if (typeof createTransaction === 'function') {
-      createTransaction(txnPayload).then(saved => {
-        const txnToAdd = saved && saved.id != null ? saved : { id: nextTransactionId, ...txnPayload };
-        setTransactions(prev => [...prev, txnToAdd]);
-        if (saved && saved.id != null) setNextTransactionId(prev => Math.max(prev, saved.id + 1));
-        else setNextTransactionId(prev => prev + 1);
-      }).catch(err => {
-        console.warn('Failed to persist transaction:', err);
+    let txnToAdd = null;
+    try {
+      if (typeof createTransaction === 'function') {
+        // use App's wrapper which persists to backend
+        const saved = await createTransaction(txnPayload);
+        txnToAdd = (saved && saved.id != null) ? saved : { id: nextTransactionId, ...txnPayload };
+
+        // After creating transaction on server try to refresh the customer from backend so transactions count is authoritative
+        try {
+          if (api && typeof api.getCustomer === 'function') {
+            const refreshed = await api.getCustomer(currentCustomer.id);
+            if (refreshed && refreshed.id != null) {
+              // replace local customer with server value
+              setCustomers(prev => prev.map(c => (c.id === refreshed.id ? refreshed : c)));
+              setCurrentCustomer(refreshed);
+            }
+          }
+        } catch (refreshErr) {
+          console.warn('Failed to refresh customer after transaction:', refreshErr);
+        }
+
+        // ensure nextTransactionId sync
+        if (txnToAdd.id != null) {
+          setNextTransactionId(prev => Math.max(prev, txnToAdd.id + 1));
+        } else {
+          setNextTransactionId(prev => prev + 1);
+        }
+
+        // update transactions list
+        setTransactions(prev => Array.isArray(prev) ? [...prev, txnToAdd] : [txnToAdd]);
+      } else {
+        // fallback local-only behavior
         const newTxn = { id: nextTransactionId, ...txnPayload };
         setTransactions(prev => [...prev, newTxn]);
         setNextTransactionId(prev => prev + 1);
-      });
-    } else {
-      const newTxn = { id: nextTransactionId, ...txnPayload };
-      setTransactions(prev => [...prev, newTxn]);
-      setNextTransactionId(prev => prev + 1);
+        txnToAdd = newTxn;
+      }
+    } catch (err) {
+      console.error('Failed to persist transaction:', err);
+      alert('Failed to save transaction to server. It has been recorded locally.');
+      // fallback local add if transaction failed and wasn't added
+      if (!txnToAdd) {
+        const newTxn = { id: nextTransactionId, ...txnPayload };
+        setTransactions(prev => [...prev, newTxn]);
+        setNextTransactionId(prev => prev + 1);
+        txnToAdd = newTxn;
+      }
+    } finally {
+      setSavingTransaction(false);
     }
 
+    // build receipt text using txnToAdd id (if present) or nextTransactionId fallback
+    const txnIdForReceipt = (txnToAdd && txnToAdd.id != null) ? txnToAdd.id : nextTransactionId;
     let receiptText = `*** Bean Machine Coffee ***\n`;
-    receiptText += `Transaction ID: ${txnPayload.id || nextTransactionId}\n`;
-    receiptText += `Customer ID: ${currentCustomer.id} (${updatedCustomer.transactions} visits)\n`;
+    receiptText += `Transaction ID: ${txnIdForReceipt}\n`;
+    receiptText += `Customer ID: ${currentCustomer.id} (${(updatedCustomer.transactions) || 0} visits)\n`;
     receiptText += `Loyalty Status: ${loyalty}\n`;
     receiptText += `--------------------------\n`;
     for (const item of orderItems) {
@@ -373,8 +417,8 @@ const OrderPage = ({
 
             <div className="change-due">CHANGE DUE: <span>{((Number(paymentAmount) || 0) > finalAmount ? (Number(paymentAmount) - finalAmount).toFixed(2) : '0.00')}</span></div>
 
-            <button className="pay-button" onClick={handlePayment} disabled={finalAmount === 0 || !currentCustomer}>
-              PAY NOW
+            <button className="pay-button" onClick={handlePayment} disabled={finalAmount === 0 || !currentCustomer || savingTransaction}>
+              {savingTransaction ? 'Saving...' : 'PAY NOW'}
             </button>
           </div>
         </div>
