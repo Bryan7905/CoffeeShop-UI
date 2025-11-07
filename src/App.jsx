@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import OrderPage from './pages/OrderPage';
 import CustomersPage from './pages/CustomerListPage';
-import api from './api'; // adjust path if your api client lives elsewhere
+import api from './api';
 import './App.css';
 
 export default function App() {
@@ -12,15 +12,26 @@ export default function App() {
   const [nextTransactionId, setNextTransactionId] = useState(1);
   const [loading, setLoading] = useState(true);
 
+  // Configure API base URL from environment or global variable
+  useEffect(() => {
+    const envUrl = (process && process.env && process.env.REACT_APP_API_URL) || window.__API_BASE_URL;
+    if (envUrl) {
+      try {
+        api.setBaseUrl(envUrl);
+        console.log('API base URL set to', envUrl);
+      } catch (e) {
+        console.warn('Failed to set API base URL', e);
+      }
+    }
+  }, []);
+
   useEffect(() => {
     async function load() {
       setLoading(true);
       try {
-        // If api is available, use it; otherwise keep empty lists
         if (api && typeof api.listCustomers === 'function') {
           const cs = await api.listCustomers();
           setCustomers(Array.isArray(cs) ? cs : []);
-          // set nextCustomerId to max id + 1 to avoid collisions when offline
           const maxCusId = cs && cs.length ? Math.max(...cs.map(c => c.id || 0)) : 0;
           setNextCustomerId(maxCusId + 1);
         }
@@ -43,14 +54,12 @@ export default function App() {
   const createCustomer = async (payload) => {
     if (api && typeof api.createCustomer === 'function') {
       const saved = await api.createCustomer(payload);
-      setCustomers(prev => (Array.isArray(prev) ? [...prev, saved] : [saved]));
-      // sync nextCustomerId
       if (saved && saved.id != null) {
+        setCustomers(prev => (Array.isArray(prev) ? [...prev, saved] : [saved]));
         setNextCustomerId(prev => Math.max(prev, saved.id + 1));
+        return saved;
       }
-      return saved;
     }
-    // fallback local-only behavior
     const newId = nextCustomerId;
     const newCust = { id: newId, name: payload.name, contact: payload.contact, transactions: 0 };
     setCustomers(prev => [...prev, newCust]);
@@ -61,13 +70,12 @@ export default function App() {
   const createTransaction = async (payload) => {
     if (api && typeof api.createTransaction === 'function') {
       const saved = await api.createTransaction(payload);
-      setTransactions(prev => (Array.isArray(prev) ? [...prev, saved] : [saved]));
       if (saved && saved.id != null) {
+        setTransactions(prev => (Array.isArray(prev) ? [...prev, saved] : [saved]));
         setNextTransactionId(prev => Math.max(prev, saved.id + 1));
+        return saved;
       }
-      return saved;
     }
-    // fallback local-only
     const newTxn = { id: nextTransactionId, ...payload };
     setTransactions(prev => [...prev, newTxn]);
     setNextTransactionId(prev => prev + 1);
