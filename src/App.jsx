@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import OrderPage from './pages/OrderPage';
 import CustomersPage from './pages/CustomerListPage';
 import api from './api';
-import api from './api';
 import './App.css';
 
 export default function App() {
