@@ -1,0 +1,341 @@
+/* Color Theme */
+:root {
+  --bg-light: #F9F8F6;
+  --bg-neutral: #EFE9E3;
+  --accent-muted: #D9CFC7;
+  --accent-primary: #C9B59C;
+}
+
+/* In App.css */
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+  background-color: var(--bg-light);
+}
+
+/* --- CENTERING THE ENTIRE APP --- */
+.app-container {
+  padding: 20px;
+  min-height: 100vh;
+  /* Use Flexbox to center content vertically and horizontally */
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Centers children horizontally */
+}
+
+/* In App.css */
+.page-container {
+  /* Set a max-width to keep content readable on large screens */
+  max-width: 1000px; /* Increased max-width slightly for the 2-column order view */
+  width: 100%; 
+  padding: 30px;
+  background-color: var(--bg-neutral);
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  
+  /* FIX: Center all inline content (text, buttons) */
+  text-align: center; 
+}
+
+/* --- Heading Alignment Fix --- */
+.page-container h1,
+.page-container h2,
+.page-container h3 {
+  text-align: center;
+}
+/* Ensure titles in cards are left-aligned */
+.section-card h3 {
+    text-align: left;
+}
+
+
+/* --- Button Styling --- */
+.button {
+  padding: 10px 15px;
+  margin: 5px;
+  border: 1px solid var(--accent-primary);
+  border-radius: 4px;
+  cursor: pointer;
+  background-color: var(--accent-primary);
+  color: #333;
+  font-weight: bold;
+  transition: background-color 0.2s;
+  /* Ensures buttons align nicely */
+  display: inline-block; 
+}
+
+.button:hover {
+  background-color: #bfa386; /* Slightly darker shade */
+}
+
+.button:disabled {
+  background-color: var(--accent-muted);
+  border-color: var(--accent-muted);
+  cursor: not-allowed;
+  color: #888;
+}
+
+/* --- Input Styling --- */
+.input, select {
+  padding: 8px;
+  margin: 5px;
+  border: 1px solid var(--accent-muted);
+  border-radius: 4px;
+  background-color: white;
+  /* Centers input text */
+  text-align: left; 
+}
+
+/* --- ORDER PAGE LAYOUT STYLES --- */
+
+/* Main 2-column grid for Order Page */
+.order-grid {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start; /* Align items to the top */
+}
+
+.main-content {
+    flex: 2; /* Takes up 2/3 of the space */
+    min-width: 0;
+}
+
+.sidebar {
+    flex: 1; /* Takes up 1/3 of the space */
+    padding: 15px;
+    background-color: var(--bg-light); /* Lighter background for the sidebar */
+    border-radius: 8px;
+    border: 1px solid var(--accent-muted);
+}
+
+/* Section Card Styles (for Customer Lookup, Item Choice) */
+.section-card {
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    margin-bottom: 20px;
+}
+
+/* Tab Bar Styling for Menu */
+.tab-bar {
+    display: flex;
+    justify-content: space-around;
+    border-bottom: 2px solid var(--accent-muted);
+    margin-bottom: 15px;
+}
+
+.tab-button {
+    flex-grow: 1;
+    padding: 10px 0;
+    cursor: pointer;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    font-weight: bold;
+    color: #555;
+    transition: all 0.2s;
+    border-radius: 0px;
+}
+
+.tab-button.active {
+    color: #333;
+    border-bottom: 3px solid var(--accent-primary); /* Primary accent color */
+}
+
+/* Item Row Styling */
+.item-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px dashed var(--accent-muted);
+}
+
+/* Qty control buttons */
+.qty-button {
+    padding: 5px 10px;
+    background-color: var(--accent-primary);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    color: white; /* Added for contrast */
+}
+
+.qty-control {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+/* Final Total Styling */
+.final-total {
+    font-size: 1.8em;
+    font-weight: bold;
+    color: green; /* Using green for emphasis as in the image */
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--accent-muted);
+}
+
+/* Adjustments for the Payment section in the sidebar */
+.payment-section {
+    margin-top: 20px;
+    padding: 15px;
+    border: 1px solid green;
+    border-radius: 8px;
+    background-color: #e6ffe6; /* Light green background */
+}
+
+.payment-section input {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.pay-button {
+    width: 100%;
+    margin-top: 15px;
+    background-color: #28a745; /* Green for Pay Now */
+    color: white;
+    padding: 10px;
+}
+.pay-button:hover {
+    background-color: #218838;
+}
+
+/* Adjusting input fields */
+.search-group {
+    display: flex;
+    gap: 10px;
+}
+/* Ensure inputs in the search group take up their space */
+.search-group .input {
+    flex-grow: 1;
+    width: auto; /* Override the default input width */
+    margin: 0;
+}
+.search-group .button {
+    flex-shrink: 0;
+    margin: 0;
+}
+
+
+/* Receipt box styling (kept simple) */
+.receipt-box {
+    margin-top: 20px;
+    padding: 15px;
+    background-color: #f5f5f5;
+    border: 1px dashed #333;
+    white-space: pre-wrap;
+    text-align: left;
+}
+
+/* --- MODAL STYLING --- */
+
+/* The overlay that covers the entire screen */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent black */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000; /* Ensure it's on top of everything */
+}
+
+/* The modal content box */
+.modal-box {
+    background-color: white;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    width: 90%;
+    max-width: 450px; /* Limit width for better appearance */
+    position: relative;
+    border-top: 5px solid #FFC107; /* Orange top border as in image */
+}
+
+/* Close button for the modal */
+.modal-close-button {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background-color: #f0f0f0;
+    border: none;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    font-size: 1.2em;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #555;
+    transition: background-color 0.2s;
+}
+
+.modal-close-button:hover {
+    background-color: #e0e0e0;
+}
+
+/* Modal Title */
+.modal-box h3 {
+    text-align: left; /* Keep modal title left-aligned */
+    color: #FFC107; /* Orange color for modal title */
+    margin-top: 0;
+    margin-bottom: 20px;
+}
+
+/* Buyer ID loading box */
+.buyer-id-box {
+    background-color: #fffacd; /* Light yellow background */
+    border: 1px solid #ffeeba;
+    padding: 10px 15px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+    font-weight: bold;
+    color: #333;
+    text-align: left;
+}
+
+/* Modal Input fields - adapting existing .input style */
+.modal-box .input {
+    width: calc(100% - 24px); /* Adjust for padding and margin */
+    margin: 10px 0; /* More vertical margin */
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 1em;
+    box-sizing: border-box;
+}
+
+/* Register Customer Button */
+.register-customer-button {
+    width: 100%;
+    padding: 12px;
+    background-color: #8892A0; /* Grayish blue as in image */
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 1.1em;
+    cursor: pointer;
+    margin-top: 20px;
+    display: flex; /* For icon and text centering */
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    transition: background-color 0.2s;
+}
+
+.register-customer-button:hover {
+    background-color: #7a8490;
+}
+.register-customer-button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+    color: #888;
+}
