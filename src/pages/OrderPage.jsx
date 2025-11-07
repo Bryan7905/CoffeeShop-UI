@@ -1,235 +1,534 @@
-import React, { useState, useMemo } from "react";
-import api from "../api"; // expects src/api.js (the api client) — adjust path if different
-import "../App.css";
+import React, { useState, useMemo } from 'react';
 
-export default function OrderPage({
+// Menu data - ADJUSTED TO MATCH IMAGE STYLE
+const MENU_ITEMS_DATA = {
+  Coffee: [
+    { name: 'Espresso', price: 3.50, category: 'Coffee' },
+    { name: 'Latte', price: 4.75, category: 'Coffee' },
+    { name: 'Cappuccino', price: 4.50, category: 'Coffee' },
+    { name: 'Americano', price: 3.25, category: 'Coffee' },
+    { name: 'Mocha', price: 5.00, category: 'Coffee' },
+  ],
+  Pastry: [
+    { name: 'Croissant', price: 3.00, category: 'Pastry' },
+    { name: 'Muffin', price: 3.50, category: 'Pastry' },
+  ],
+  'Cake/Bread': [
+    { name: 'Chocolate Cake Slice', price: 4.50, category: 'Cake/Bread' },
+    { name: 'Banana Bread', price: 3.00, category: 'Cake/Bread' },
+  ],
+  Drinks: [
+    { name: 'Canned Soda', price: 2.00, category: 'Drinks' },
+    { name: 'Mango Smoothie', price: 4.50, category: 'Drinks' },
+    { name: 'Bottled Water', price: 1.50, category: 'Drinks' },
+  ],
+  Food: [
+    { name: 'Chicken Pesto Pasta', price: 10.00, category: 'Food' },
+    { name: 'Beef Lasagna', price: 12.00, category: 'Food' },
+  ],
+};
+
+const MENU_CATEGORIES = Object.keys(MENU_ITEMS_DATA);
+
+// Loyalty Discount Logic (Kept as before)
+const getDiscountRate = (transactions) => {
+  let discount = 0.0;
+  let loyalty = 'Basic';
+
+  if (transactions >= 26) {
+    discount = 0.25; loyalty = 'Diamond';
+  } else if (transactions >= 16) {
+    discount = 0.20; loyalty = 'Platinum';
+  } else if (transactions >= 11) {
+    discount = 0.10; loyalty = 'Gold';
+  } else if (transactions >= 6) {
+    discount = 0.05; loyalty = 'Silver';
+  } else {
+    discount = 0.0; loyalty = 'Basic';
+  }
+  return { discount, loyalty };
+};
+
+// New Customer Modal Component
+const NewCustomerModal = ({ show, onClose, newCustomer, setNewCustomer, nextCustomerId, onRegister, registering }) => {
+    if (!show) return null;
+
+    const isInputValid = newCustomer.name.trim() !== '' && newCustomer.contact.trim() !== '';
+
+    return (
+        <div className="modal-overlay">
+            <div className="modal-box">
+                <button className="modal-close-button" onClick={onClose}>
+                    &times;
+                </button>
+                <h3>Register New Customer</h3>
+
+                <div className="buyer-id-box">
+                    New Customer ID: <strong>{nextCustomerId}</strong>
+                </div>
+
+                <input
+                    className="input"
+                    placeholder="Full Name (e.g., Jane Doe)"
+                    value={newCustomer.name}
+                    onChange={(e) => setNewCustomer({...newCustomer, name: e.target.value})}
+                />
+                <input
+                    className="input"
+                    placeholder="Contact Info (Email or Phone Number)"
+                    value={newCustomer.contact}
+                    onChange={(e) => setNewCustomer({...newCustomer, contact: e.target.value})}
+                />
+
+                <button 
+                    className="register-customer-button" 
+                    onClick={onRegister}
+                    disabled={!isInputValid || registering}
+                >
+                    {registering ? 'Registering...' : (
+                      <>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 12h-4"/><path d="M19 8v8"/></svg>
+                        Register Customer
+                      </>
+                    )}
+                </button>
+            </div>
+        </div>
+    );
+};
+
+// RECEIPT MODAL COMPONENT
+const ReceiptModal = ({ show, onClose, receiptText, onNewOrder }) => {
+    if (!show || !receiptText) return null;
+
+    return (
+        <div className="modal-overlay">
+            <div className="modal-box receipt-modal-content">
+                <h3 className="text-center mb-4 text-2xl font-semibold">Transaction Complete!</h3>
+                <h4 className="text-center mb-4 text-xl">🧾 Official Receipt</h4>
+                
+                <div className="receipt-display-box">
+                    <pre className="receipt-box">{receiptText}</pre>
+                </div>
+                
+                <button 
+                    className="button primary-action mt-6 w-full" 
+                    onClick={onNewOrder}
+                >
+                    Start New Order
+                </button>
+                <button 
+                    className="button secondary-action mt-2 w-full" 
+                    onClick={onClose}
+                >
+                    Close & Keep Customer
+                </button>
+            </div>
+        </div>
+    );
+};
+
+const OrderPage = ({
   navigate,
-  customers = [],
+  customers,
   setCustomers,
-  transactions = [],
+  nextCustomerId,
+  setNextCustomerId,
+  transactions,
   setTransactions,
-}) {
-  // Form state
-  const [selectedCustomerId, setSelectedCustomerId] = useState(
-    customers.length ? String(customers[0].id) : "new"
-  );
-  const [newCustomerName, setNewCustomerName] = useState("");
-  const [newCustomerContact, setNewCustomerContact] = useState("");
+  nextTransactionId,
+  setNextTransactionId,
+  createCustomer // optional prop - if provided will be used to persist new customers to backend
+}) => {
+  const [customerIdInput, setCustomerIdInput] = useState('');
+  const [currentCustomer, setCurrentCustomer] = useState(null);
+  const [orderItems, setOrderItems] = useState([]);
+  const [receipt, setReceipt] = useState(null);
+  const [newCustomer, setNewCustomer] = useState({ name: '', contact: '' });
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [activeTab, setActiveTab] = useState(MENU_CATEGORIES[0]);
 
-  const [items, setItems] = useState([
-    { name: "Latte", qty: 1, price: 5 },
-  ]);
-  const [discount, setDiscount] = useState(0);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
+  // modal visibility state
+  const [showNewCustomerModal, setShowNewCustomerModal] = useState(false);
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [registeringCustomer, setRegisteringCustomer] = useState(false);
 
-  // Derived totals
-  const totals = useMemo(() => {
-    const total = items
-      .map((it) => {
-        const qty = Number(it.qty) || 0;
-        const price = Number(it.price) || 0;
-        return price * qty;
-      })
-      .reduce((a, b) => a + b, 0);
-    const disc = Number(discount) || 0;
-    const finalTotal = Math.max(0, total - disc);
-    return { total, discount: disc, finalTotal };
-  }, [items, discount]);
-
-  // Item handlers
-  const handleItemChange = (index, field, value) => {
-    setItems((prev) => {
-      const next = prev.map((it, i) => (i === index ? { ...it, [field]: value } : it));
-      return next;
-    });
-  };
-
-  const handleAddItem = () =>
-    setItems((prev) => [...prev, { name: "", qty: 1, price: 0 }]);
-
-  const handleRemoveItem = (index) =>
-    setItems((prev) => prev.filter((_, i) => i !== index));
-
-  // Create customer (if needed) and transaction
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    setSaving(true);
-
+  // 1) Optional helper: createCustomer integration (from pseudo-example)
+  const handleCreateCustomerAndUse = async (name, contact) => {
+    if (!createCustomer) {
+      throw new Error('No createCustomer function provided');
+    }
     try {
-      let customerId = null;
-
-      // If user selected "new" create a customer first
-      if (selectedCustomerId === "new") {
-        if (!newCustomerName.trim()) {
-          throw new Error("New customer name is required");
-        }
-        // Create customer on backend
-        const created = await api.createCustomer({
-          name: newCustomerName.trim(),
-          contact: newCustomerContact.trim(),
-        });
-        // update UI list
-        setCustomers((prev) => (Array.isArray(prev) ? [...prev, created] : [created]));
-        customerId = created.id;
-      } else {
-        customerId = Number(selectedCustomerId);
-      }
-
-      // Build transaction request
-      const itemsPayload = items
-        .filter((it) => it && (it.name || Number(it.qty) || Number(it.price)))
-        .map((it) => ({
-          name: it.name || "",
-          qty: Number(it.qty) || 0,
-          price: Number(it.price) || 0,
-        }));
-
-      if (!itemsPayload.length) {
-        throw new Error("Add at least one item to the order");
-      }
-
-      const txnReq = {
-        customerId,
-        items: itemsPayload,
-        discount: Number(discount) || 0,
-      };
-
-      // Persist transaction
-      const savedTxn = await api.createTransaction(txnReq);
-
-      // Update UI transactions list
-      setTransactions((prev) => (Array.isArray(prev) ? [...prev, savedTxn] : [savedTxn]));
-
-      // clear form (keep customers)
-      setItems([{ name: "Latte", qty: 1, price: 5 }]);
-      setDiscount(0);
-      setNewCustomerName("");
-      setNewCustomerContact("");
-      setSelectedCustomerId(String(customerId));
-
-      // Optionally navigate back to home or customers list
-      navigate("home");
+      const saved = await createCustomer({ name, contact });
+      return saved;
     } catch (err) {
-      console.error("Failed to create transaction:", err);
-      setError(err.message || "Failed to create transaction");
-    } finally {
-      setSaving(false);
+      console.error('Failed to create customer', err);
+      alert('Could not create customer: ' + (err.message || err.status));
+      throw err;
     }
   };
 
-  return (
-    <div className="order-page">
-      <h2>Create Order</h2>
+  // 1. Customer Search & Add
+  const handleCustomerSearch = () => {
+    const id = parseInt(customerIdInput);
+    const customer = customers.find(c => c.id === id);
 
-      <form onSubmit={handleSubmit} className="order-form">
-        <section>
-          <label>Customer</label>
-          <div>
-            <select
-              value={selectedCustomerId}
-              onChange={(e) => setSelectedCustomerId(e.target.value)}
-            >
-              <option value="new">-- New Customer --</option>
-              {customers.map((c) => (
-                <option key={c.id} value={String(c.id)}>
-                  {c.name} {c.contact ? `(${c.contact})` : ""}
-                </option>
-              ))}
-            </select>
+    if (customer) {
+      setCurrentCustomer(customer);
+      setReceipt(null);
+    } else {
+      setCurrentCustomer(null);
+      setShowNewCustomerModal(true); 
+    }
+  };
+
+  // Register new customer - now supports optional backend persistence if createCustomer prop is given
+  const handleRegisterNewCustomer = async () => {
+    if (!newCustomer.name || !newCustomer.contact) {
+      console.error('Registration failed: Missing name or contact.');
+      return;
+    }
+
+    setRegisteringCustomer(true);
+    try {
+      if (typeof createCustomer === 'function') {
+        // Persist via API and use server response
+        const created = await handleCreateCustomerAndUse(newCustomer.name.trim(), newCustomer.contact.trim());
+        // if backend returned an object, use it; otherwise fall back to local creation
+        if (created && created.id != null) {
+          setCustomers(prev => Array.isArray(prev) ? [...prev, created] : [created]);
+          setCurrentCustomer(created);
+          setCustomerIdInput(String(created.id));
+          // optionally sync nextCustomerId to avoid ID collisions (if you maintain local ids)
+          if (nextCustomerId <= created.id) {
+            setNextCustomerId(created.id + 1);
+          }
+        } else {
+          // fallback: local creation
+          const newId = nextCustomerId;
+          const newCust = { id: newId, name: newCustomer.name, contact: newCustomer.contact, transactions: 0 };
+          setCustomers(prev => [...prev, newCust]);
+          setNextCustomerId(prev => prev + 1);
+          setCurrentCustomer(newCust);
+          setCustomerIdInput(String(newId));
+        }
+      } else {
+        // Local-only creation (no backend)
+        const newId = nextCustomerId;
+        const newCust = { id: newId, name: newCustomer.name, contact: newCustomer.contact, transactions: 0 };
+        setCustomers(prev => [...prev, newCust]);
+        setNextCustomerId(prev => prev + 1);
+        setCurrentCustomer(newCust);
+        setCustomerIdInput(String(newId));
+      }
+
+      setNewCustomer({ name: '', contact: '' });
+      setShowNewCustomerModal(false);
+    } catch (err) {
+      console.error('Error during customer registration:', err);
+      // keep modal open so user can retry
+    } finally {
+      setRegisteringCustomer(false);
+    }
+  };
+  
+  // 2. Order Management
+  const handleUpdateQty = (item, delta) => {
+    const existingIndex = orderItems.findIndex(i => i.name === item.name);
+    if (existingIndex > -1) {
+      const updatedItems = [...orderItems];
+      updatedItems[existingIndex].qty += delta;
+      if (updatedItems[existingIndex].qty <= 0) {
+        updatedItems.splice(existingIndex, 1);
+      }
+      setOrderItems(updatedItems);
+    } else if (delta > 0) {
+      setOrderItems(prev => [...prev, { ...item, qty: 1 }]);
+    }
+  };
+
+  // 3. Calculation Logic
+  const { subtotal, discountRate, savedAmount, finalAmount, loyalty } = useMemo(() => {
+    let subtotal = 0;
+    for (let i = 0; i < orderItems.length; i++) {
+      subtotal += orderItems[i].price * orderItems[i].qty;
+    }
+
+    const transactionsCount = currentCustomer?.transactions || 0;
+    const { discount: rate, loyalty: level } = getDiscountRate(transactionsCount);
+    
+    const discountValue = subtotal * rate;
+    const final = subtotal - discountValue;
+
+    return {
+      subtotal,
+      discountRate: rate * 100,
+      savedAmount: discountValue,
+      finalAmount: final,
+      loyalty: level
+    };
+  }, [orderItems, currentCustomer]);
+
+  // 4. Payment and Receipt
+  const handlePayment = () => {
+    const paid = parseFloat(paymentAmount);
+    if (isNaN(paid)) {
+      alert('Please enter a valid payment amount');
+      return;
+    }
+
+    if (paid < finalAmount) {
+      let required = finalAmount;
+      let newPaymentStr = prompt(`Payment is not enough! You need $${(required - paid).toFixed(2)} more. Enter full amount:`);
+      while (newPaymentStr !== null && (isNaN(parseFloat(newPaymentStr)) || parseFloat(newPaymentStr) < required)) {
+        if (newPaymentStr === null) {
+          console.log("Payment cancelled.");
+          return;
+        }
+        if (isNaN(parseFloat(newPaymentStr))) {
+          newPaymentStr = prompt(`Invalid input. Please enter the full amount (required: $${required.toFixed(2)}):`);
+        } else if (parseFloat(newPaymentStr) < required) {
+          newPaymentStr = prompt(`Payment is still not enough. You need $${(required - parseFloat(newPaymentStr)).toFixed(2)} more. Enter full amount:`);
+        }
+      }
+      if (newPaymentStr === null) return;
+      const input = parseFloat(newPaymentStr);
+      setPaymentAmount(input.toFixed(2));
+      const change = input - required;
+      generateReceipt(input, change);
+    } else {
+      const change = paid - finalAmount;
+      generateReceipt(paid, change);
+    }
+  };
+  
+  const generateReceipt = (paid, change) => {
+    if (!currentCustomer) { console.error("Please select a customer first."); return; }
+    if (orderItems.length === 0) { console.error("Order is empty."); return; }
+
+    const updatedCustomer = { ...currentCustomer, transactions: (currentCustomer.transactions || 0) + 1 };
+    setCustomers(prev => prev.map(c => c.id === currentCustomer.id ? updatedCustomer : c));
+    setCurrentCustomer(updatedCustomer);
+
+    const newTransaction = {
+      id: nextTransactionId,
+      customerId: currentCustomer.id,
+      items: orderItems,
+      total: subtotal,
+      discount: savedAmount,
+      finalTotal: finalAmount,
+    };
+    
+    setTransactions(prev => [...prev, newTransaction]);
+    setNextTransactionId(prev => prev + 1);
+
+    let receiptText = `*** Bean Machine Coffee ***\n`;
+    receiptText += `Transaction ID: ${newTransaction.id}\n`;
+    receiptText += `Customer ID: ${currentCustomer.id} (${updatedCustomer.transactions} visits)\n`;
+    receiptText += `Loyalty Status: ${loyalty}\n`;
+    receiptText += `--------------------------\n`;
+    for (const item of orderItems) {
+      const lineTotal = item.price * item.qty;
+      receiptText += `${item.name.padEnd(20)} x${item.qty} = $${lineTotal.toFixed(2)}\n`;
+    }
+    receiptText += `--------------------------\n`;
+    receiptText += `Subtotal: $${subtotal.toFixed(2)}\n`;
+    receiptText += `Discount (${discountRate.toFixed(0)}%): -$${savedAmount.toFixed(2)}\n`;
+    receiptText += `Final Total: $${finalAmount.toFixed(2)}\n`;
+    receiptText += `Amount Paid: $${paid.toFixed(2)}\n`;
+    receiptText += `Change: $${change.toFixed(2)}\n`;
+    receiptText += `*** Thank You! ***`;
+
+    setReceipt(receiptText);
+    setOrderItems([]);
+    setPaymentAmount('');
+    setShowReceiptModal(true);
+  };
+  
+  const handleNewOrder = () => {
+    setReceipt(null);
+    setShowReceiptModal(false);
+    setCurrentCustomer(null);
+    setCustomerIdInput('');
+  };
+
+  const currentItemCount = (name) => {
+    return orderItems.find(i => i.name === name)?.qty || 0;
+  };
+
+  return (
+    <div className="page-container">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h2 style={{ margin: 0, textAlign: 'left' }}>The Code Cafe POS</h2>
+        <div>
+          <button className="button" onClick={() => navigate('home')}>Back to Home</button>
+          <button className="button" onClick={() => navigate('customers')}>Customer List</button>
+        </div>
+      </div>
+
+      <div className="order-grid">
+        <div className="main-content">
+          <div className="section-card">
+            <h3>1. Customer Loyalty & Lookup</h3>
+            <div className="search-group">
+              <input
+                type="number"
+                className="input"
+                placeholder="Enter Buyer ID (e.g. 1)"
+                value={customerIdInput}
+                onChange={(e) => setCustomerIdInput(e.target.value)}
+              />
+              <button className="button primary-action" onClick={handleCustomerSearch} disabled={!customerIdInput}>Lookup</button>
+              <button className="button secondary-action" onClick={() => setShowNewCustomerModal(true)}>New Customer</button>
+            </div>
+            {currentCustomer && (
+              <p style={{ marginTop: '10px', textAlign: 'left' }}>
+                <strong>Customer:</strong> {currentCustomer.name} (ID: {currentCustomer.id}). <strong>Loyalty:</strong> {loyalty} ({discountRate.toFixed(0)}% Off).
+              </p>
+            )}
+            {!currentCustomer && (
+                <p style={{marginTop: '10px', color: '#888', textAlign: 'left'}}>
+                    Enter a Buyer ID and click <strong>Lookup</strong> to check loyalty status.
+                </p>
+            )}
           </div>
 
-          {selectedCustomerId === "new" && (
-            <div className="new-customer">
-              <input
-                type="text"
-                placeholder="Name"
-                value={newCustomerName}
-                onChange={(e) => setNewCustomerName(e.target.value)}
-              />
-              <input
-                type="text"
-                placeholder="Contact (email or phone)"
-                value={newCustomerContact}
-                onChange={(e) => setNewCustomerContact(e.target.value)}
-              />
-            </div>
-          )}
-        </section>
+          <div className="section-card">
+            <h3>2. Choose Your Items</h3>
 
-        <section>
-          <label>Items</label>
-          <div className="items-list">
-            {items.map((item, idx) => (
-              <div key={idx} className="order-item">
-                <input
-                  type="text"
-                  placeholder="Item name"
-                  value={item.name}
-                  onChange={(e) => handleItemChange(idx, "name", e.target.value)}
-                />
-                <input
-                  type="number"
-                  min="1"
-                  placeholder="Qty"
-                  value={item.qty}
-                  onChange={(e) => handleItemChange(idx, "qty", e.target.value)}
-                  style={{ width: 80 }}
-                />
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="Price"
-                  value={item.price}
-                  onChange={(e) => handleItemChange(idx, "price", e.target.value)}
-                  style={{ width: 100 }}
-                />
-                <button type="button" onClick={() => handleRemoveItem(idx)}>
-                  Remove
-                </button>
-              </div>
-            ))}
+            <div className="tab-bar">
+                {MENU_CATEGORIES.map(category => (
+                    <button
+                        key={category}
+                        className={`tab-button ${activeTab === category ? 'active' : ''}`}
+                        onClick={() => setActiveTab(category)}
+                    >
+                        {category}
+                    </button>
+                ))}
+            </div>
 
             <div>
-              <button type="button" onClick={handleAddItem}>
-                + Add Item
-              </button>
+                {MENU_ITEMS_DATA[activeTab]?.map(item => (
+                    <div key={item.name} className="item-row">
+                        <div style={{textAlign: 'left'}}>
+                            <p style={{ margin: 0, fontWeight: 'bold' }}>{item.name}</p>
+                            <span style={{ fontSize: '0.9em', color: '#555' }}>${item.price.toFixed(2)}</span>
+                        </div>
+                        
+                        <div className="qty-control">
+                            <button 
+                                className="qty-button decrement" 
+                                onClick={() => handleUpdateQty(item, -1)} 
+                                disabled={currentItemCount(item.name) === 0}
+                            >
+                                -
+                            </button>
+                            <span>
+                                {currentItemCount(item.name)}
+                            </span>
+                            <button 
+                                className="qty-button increment" 
+                                onClick={() => handleUpdateQty(item, 1)}
+                            >
+                                +
+                            </button>
+                        </div>
+                    </div>
+                ))}
             </div>
           </div>
-        </section>
-
-        <section>
-          <label>Discount</label>
-          <input
-            type="number"
-            min="0"
-            step="0.01"
-            value={discount}
-            onChange={(e) => setDiscount(e.target.value)}
-          />
-        </section>
-
-        <section className="totals">
-          <div>Total: ${totals.total.toFixed(2)}</div>
-          <div>Discount: ${totals.discount.toFixed(2)}</div>
-          <div>
-            <strong>Final Total: ${totals.finalTotal.toFixed(2)}</strong>
-          </div>
-        </section>
-
-        {error && <div className="error">{error}</div>}
-
-        <div className="actions">
-          <button type="button" onClick={() => navigate("home")} disabled={saving}>
-            Cancel
-          </button>
-          <button type="submit" disabled={saving}>
-            {saving ? "Saving..." : "Create Order"}
-          </button>
         </div>
-      </form>
+
+        <div className="sidebar">
+          <div className="section-card">
+            <h3><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg> Your Bill</h3>
+            {orderItems.length === 0 ? (
+                <p style={{textAlign: 'center', color: '#888'}}>No items selected.</p>
+            ) : (
+                <table style={{marginBottom: '10px', fontSize: '0.9em', width: '100%', textAlign: 'left'}}>
+                    <thead>
+                        <tr style={{borderBottom: '1px solid #ddd'}}>
+                            <th style={{paddingBottom: '5px'}}>Item</th>
+                            <th style={{textAlign: 'right', paddingBottom: '5px'}}>Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {orderItems.map((item, index) => (
+                            <tr key={index}>
+                                <td>{item.name} x{item.qty}</td>
+                                <td style={{textAlign: 'right'}}>${(item.price * item.qty).toFixed(2)}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            )}
+
+            <div className="bill-details">
+              <p>Subtotal: <span><strong>${subtotal.toFixed(2)}</strong></span></p>
+              <p className="discount-line">Discount ({discountRate.toFixed(0)}%): <span><strong>-${savedAmount.toFixed(2)}</strong></span></p>
+            </div>
+            
+            <div className="final-total">
+                FINAL TOTAL: <span>${finalAmount.toFixed(2)}</span>
+            </div>
+            
+            <button className="button" onClick={() => setOrderItems([])} disabled={orderItems.length === 0} style={{width: '100%', marginTop: '10px'}}>
+                Clear Order
+            </button>
+          </div>
+
+          <div className="section-card payment-section">
+            <h3><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> 3. Process Payment</h3>
+            
+            <div className="cash-input-group">
+              <label>Cash Paid ($):</label>
+              <input
+                type="number"
+                className="input"
+                value={paymentAmount}
+                onChange={(e) => setPaymentAmount(e.target.value)}
+                disabled={finalAmount === 0 || !currentCustomer}
+              />
+            </div>
+
+            <div className="change-due">
+                CHANGE DUE: 
+                <span>
+                    {(paymentAmount > finalAmount ? paymentAmount - finalAmount : 0).toFixed(2)}
+                </span>
+            </div>
+            
+            <button 
+                className="pay-button" 
+                onClick={handlePayment} 
+                disabled={finalAmount === 0 || !currentCustomer || parseFloat(paymentAmount) < finalAmount}
+            >
+                PAY NOW
+            </button>
+          </div>
+
+        </div>
+      </div>
+      
+      <NewCustomerModal
+        show={showNewCustomerModal}
+        onClose={() => { setShowNewCustomerModal(false); setRegisteringCustomer(false); }}
+        newCustomer={newCustomer}
+        setNewCustomer={setNewCustomer}
+        nextCustomerId={nextCustomerId}
+        onRegister={handleRegisterNewCustomer}
+        registering={registeringCustomer}
+      />
+
+      <ReceiptModal
+        show={showReceiptModal}
+        onClose={() => setShowReceiptModal(false)}
+        receiptText={receipt}
+        onNewOrder={handleNewOrder}
+      />
     </div>
   );
-}
+};
+
+export default OrderPage;
