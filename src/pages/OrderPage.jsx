@@ -1,12 +1,6 @@
-// This is your original OrderPage.jsx with small adjustments:
-// 1) If you pass createCustomer/createTransaction props (from App.jsx) they will be used to persist to backend.
-// 2) PAY button enabling logic simplified so the user can open the payment flow; final validation still happens inside handlePayment.
-// 3) Register button disabled while registering.
-// (All other logic is preserved.)
-
 import React, { useState, useMemo } from 'react';
 
-// Menu data - ADJUSTED TO MATCH IMAGE STYLE
+// Menu data - unchanged from your design
 const MENU_ITEMS_DATA = {
   Coffee: [
     { name: 'Espresso', price: 3.50, category: 'Coffee' },
@@ -55,39 +49,39 @@ const getDiscountRate = (transactions) => {
 };
 
 const NewCustomerModal = ({ show, onClose, newCustomer, setNewCustomer, nextCustomerId, onRegister, registering }) => {
-    if (!show) return null;
-    const isInputValid = newCustomer.name.trim() !== '' && newCustomer.contact.trim() !== '';
-    return (
-        <div className="modal-overlay">
-            <div className="modal-box">
-                <button className="modal-close-button" onClick={onClose}>&times;</button>
-                <h3>Register New Customer</h3>
-                <div className="buyer-id-box">New Customer ID: <strong>{nextCustomerId}</strong></div>
-                <input className="input" placeholder="Full Name" value={newCustomer.name}
-                  onChange={(e) => setNewCustomer({...newCustomer, name: e.target.value})} />
-                <input className="input" placeholder="Contact Info" value={newCustomer.contact}
-                  onChange={(e) => setNewCustomer({...newCustomer, contact: e.target.value})} />
-                <button className="register-customer-button" onClick={onRegister} disabled={!isInputValid || registering}>
-                  {registering ? 'Registering...' : 'Register Customer'}
-                </button>
-            </div>
-        </div>
-    );
+  if (!show) return null;
+  const isInputValid = newCustomer.name.trim() !== '' && newCustomer.contact.trim() !== '';
+  return (
+    <div className="modal-overlay">
+      <div className="modal-box">
+        <button className="modal-close-button" onClick={onClose}>&times;</button>
+        <h3>Register New Customer</h3>
+        <div className="buyer-id-box">New Customer ID: <strong>{nextCustomerId}</strong></div>
+        <input className="input" placeholder="Full Name" value={newCustomer.name}
+          onChange={(e) => setNewCustomer({...newCustomer, name: e.target.value})} />
+        <input className="input" placeholder="Contact Info" value={newCustomer.contact}
+          onChange={(e) => setNewCustomer({...newCustomer, contact: e.target.value})} />
+        <button className="register-customer-button" onClick={onRegister} disabled={!isInputValid || registering}>
+          {registering ? 'Registering...' : 'Register Customer'}
+        </button>
+      </div>
+    </div>
+  );
 };
 
 const ReceiptModal = ({ show, onClose, receiptText, onNewOrder }) => {
-    if (!show || !receiptText) return null;
-    return (
-        <div className="modal-overlay">
-            <div className="modal-box receipt-modal-content">
-                <h3>Transaction Complete!</h3>
-                <h4>🧾 Official Receipt</h4>
-                <div className="receipt-display-box"><pre className="receipt-box">{receiptText}</pre></div>
-                <button className="button primary-action" onClick={onNewOrder}>Start New Order</button>
-                <button className="button secondary-action" onClick={onClose}>Close & Keep Customer</button>
-            </div>
-        </div>
-    );
+  if (!show || !receiptText) return null;
+  return (
+    <div className="modal-overlay">
+      <div className="modal-box receipt-modal-content">
+        <h3>Transaction Complete!</h3>
+        <h4>🧾 Official Receipt</h4>
+        <div className="receipt-display-box"><pre className="receipt-box">{receiptText}</pre></div>
+        <button className="button primary-action" onClick={onNewOrder}>Start New Order</button>
+        <button className="button secondary-action" onClick={onClose}>Close & Keep Customer</button>
+      </div>
+    </div>
+  );
 };
 
 const OrderPage = ({
@@ -100,8 +94,8 @@ const OrderPage = ({
   setTransactions,
   nextTransactionId,
   setNextTransactionId,
-  createCustomer, // optional
-  createTransaction // optional
+  createCustomer, // optional - passed from App to persist customers
+  createTransaction // optional - passed from App to persist transactions
 }) => {
   const [customerIdInput, setCustomerIdInput] = useState('');
   const [currentCustomer, setCurrentCustomer] = useState(null);
@@ -117,14 +111,7 @@ const OrderPage = ({
 
   const handleCreateCustomerAndUse = async (name, contact) => {
     if (!createCustomer) throw new Error('No createCustomer function provided');
-    try {
-      const saved = await createCustomer({ name, contact });
-      return saved;
-    } catch (err) {
-      console.error('Failed to create customer', err);
-      alert('Could not create customer: ' + (err.message || err.status));
-      throw err;
-    }
+    return createCustomer({ name, contact });
   };
 
   const handleCustomerSearch = () => {
@@ -148,19 +135,17 @@ const OrderPage = ({
     try {
       if (typeof createCustomer === 'function') {
         const created = await handleCreateCustomerAndUse(newCustomer.name.trim(), newCustomer.contact.trim());
-        if (created && created.id != null) {
-          setCustomers(prev => Array.isArray(prev) ? [...prev, created] : [created]);
-          setCurrentCustomer(created);
-          setCustomerIdInput(String(created.id));
-          if (nextCustomerId <= created.id) setNextCustomerId(created.id + 1);
-        } else {
-          const newId = nextCustomerId;
-          const newCust = { id: newId, name: newCustomer.name, contact: newCustomer.contact, transactions: 0 };
-          setCustomers(prev => [...prev, newCust]);
-          setNextCustomerId(prev => prev + 1);
-          setCurrentCustomer(newCust);
-          setCustomerIdInput(String(newId));
-        }
+        const assignedId = (created && created.id != null) ? created.id : nextCustomerId;
+        const customerToAdd = (created && created.id != null) ? created : {
+          id: assignedId,
+          name: newCustomer.name,
+          contact: newCustomer.contact,
+          transactions: 0
+        };
+        setCustomers(prev => Array.isArray(prev) ? [...prev, customerToAdd] : [customerToAdd]);
+        setCurrentCustomer(customerToAdd);
+        setCustomerIdInput(String(assignedId));
+        if (nextCustomerId <= assignedId) setNextCustomerId(assignedId + 1);
       } else {
         const newId = nextCustomerId;
         const newCust = { id: newId, name: newCustomer.name, contact: newCustomer.contact, transactions: 0 };
@@ -239,8 +224,7 @@ const OrderPage = ({
     setCustomers(prev => prev.map(c => c.id === currentCustomer.id ? updatedCustomer : c));
     setCurrentCustomer(updatedCustomer);
 
-    const newTransaction = {
-      id: nextTransactionId,
+    const txnPayload = {
       customerId: currentCustomer.id,
       items: orderItems,
       total: subtotal,
@@ -248,16 +232,26 @@ const OrderPage = ({
       finalTotal: finalAmount,
     };
 
-    // persist transaction if createTransaction is provided
     if (typeof createTransaction === 'function') {
-      createTransaction(newTransaction).catch(err => console.warn('Failed to persist transaction:', err));
+      createTransaction(txnPayload).then(saved => {
+        const txnToAdd = saved && saved.id != null ? saved : { id: nextTransactionId, ...txnPayload };
+        setTransactions(prev => [...prev, txnToAdd]);
+        if (saved && saved.id != null) setNextTransactionId(prev => Math.max(prev, saved.id + 1));
+        else setNextTransactionId(prev => prev + 1);
+      }).catch(err => {
+        console.warn('Failed to persist transaction:', err);
+        const newTxn = { id: nextTransactionId, ...txnPayload };
+        setTransactions(prev => [...prev, newTxn]);
+        setNextTransactionId(prev => prev + 1);
+      });
     } else {
-      setTransactions(prev => [...prev, newTransaction]);
+      const newTxn = { id: nextTransactionId, ...txnPayload };
+      setTransactions(prev => [...prev, newTxn]);
       setNextTransactionId(prev => prev + 1);
     }
 
     let receiptText = `*** Bean Machine Coffee ***\n`;
-    receiptText += `Transaction ID: ${newTransaction.id}\n`;
+    receiptText += `Transaction ID: ${txnPayload.id || nextTransactionId}\n`;
     receiptText += `Customer ID: ${currentCustomer.id} (${updatedCustomer.transactions} visits)\n`;
     receiptText += `Loyalty Status: ${loyalty}\n`;
     receiptText += `--------------------------\n`;
@@ -379,7 +373,6 @@ const OrderPage = ({
 
             <div className="change-due">CHANGE DUE: <span>{((Number(paymentAmount) || 0) > finalAmount ? (Number(paymentAmount) - finalAmount).toFixed(2) : '0.00')}</span></div>
 
-            {/* PAY button: allow entering payment flow (handler will validate) */}
             <button className="pay-button" onClick={handlePayment} disabled={finalAmount === 0 || !currentCustomer}>
               PAY NOW
             </button>

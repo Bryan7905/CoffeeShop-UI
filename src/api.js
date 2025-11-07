@@ -187,7 +187,7 @@ const createClient = (initialBaseUrl = "/") => {
 };
 
 // default client instance - you can override baseUrl later with api.setBaseUrl(...)
-const api = createClient(window && window.__API_BASE_URL ? window.__API_BASE_URL : "http://localhost:8080");
+const api = createClient(window && window.__API_BASE_URL ? window.__API_BASE_URL : "https://coffeeshop-api-e6le.onrender.com");
 
 export default api;
 export { createClient };

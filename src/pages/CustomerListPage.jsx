@@ -1,6 +1,8 @@
 import React from 'react';
 
-const CustomersPage = ({ navigate, customers = [], setCustomers }) => {
+const CustomerListPage = ({ navigate, customers = [], setCustomers }) => {
+  console.log('CustomerListPage render — customers:', customers);
+
   const handleDelete = (id) => {
     if (!window.confirm('Delete this customer?')) return;
     setCustomers(prev => prev.filter(c => c.id !== id));
@@ -48,4 +50,4 @@ const CustomersPage = ({ navigate, customers = [], setCustomers }) => {
   );
 };
 
-export default CustomersPage;
+export default CustomerListPage;
