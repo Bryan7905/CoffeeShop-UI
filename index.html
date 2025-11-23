@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>CoffeeShop POS</title>
+
+    <!-- ✅ Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+
+    <!-- ✅ Preload hero image (Improves LCP + avoids layout jump) -->
+    <link rel="preload" as="image" href="/images/coffee.png" type="image/png" />
+
+    <!-- ✅ Preconnect to Google Fonts early -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+    <!-- ✅ Use font-display:swap to prevent CLS text jumps -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- ✅ Preload your main app script -->
+    <link rel="modulepreload" href="/src/main.jsx" />
+
+    <!-- ✅ Preload your main stylesheet -->
+    <link rel="preload" as="style" href="/src/index.css" />
+
+    <!-- ✅ Inline minimal critical CSS to prevent white flash -->
+    <style>
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        margin: 0;
+        background-color: #27211e;
+        font-family: 'Montserrat', sans-serif;
+        color: #3b2f2f;
+        min-height: 100vh;
+        overflow-x: hidden; /* Prevents horizontal shifts */
+      }
+
+      /* ✅ Reserve space for main container to avoid CLS on mount */
+      #root {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        transition: opacity 0.3s ease-in;
+      }
+
+      /* ✅ Optional skeleton while app mounts (stops initial jump) */
+      #root::before {
+        content: "";
+        width: 80%;
+        height: 400px;
+        max-width: 1000px;
+        border-radius: 12px;
+        background-color: #3b2f2f22;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        display: block;
+        animation: pulse 1.2s infinite ease-in-out;
+      }
+
+      @keyframes pulse {
+        0% { opacity: 0.6; }
+        50% { opacity: 1; }
+        100% { opacity: 0.6; }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="root"></div>
+
+    <!-- ✅ Load JS non-blocking -->
+    <script type="module" src="/src/main.jsx" defer></script>
+  </body>
+</html>
