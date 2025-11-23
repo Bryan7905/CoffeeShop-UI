@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import api from '../api';
+
 
 // --- Constants & Helpers from OrderPage.js ---
 const EXCHANGE_RATE = 56.0;

@@ -182,6 +182,30 @@ const createClient = (initialBaseUrl = "/") => {
     return handleResponse(res);
   };
 
+  // Reports - optional backend endpoints for pre-computed aggregates
+  // GET /api/reports?frame=week
+  const getReports = async (frameId) => {
+    const q = frameId ? `?frame=${encodeURIComponent(frameId)}` : '';
+    const res = await withTimeout(fetch(`${baseUrl}/api/reports${q}`, {
+      method: 'GET',
+      headers: defaultHeaders(authToken),
+    }), timeout);
+    return handleResponse(res);
+  };
+
+  // GET /api/reports?start=2025-01-01T00:00:00Z&end=2025-01-07T23:59:59Z
+  const getReportsRange = async (startIso, endIso) => {
+    const params = new URLSearchParams();
+    if (startIso) params.set('start', startIso);
+    if (endIso) params.set('end', endIso);
+    const q = params.toString() ? `?${params.toString()}` : '';
+    const res = await withTimeout(fetch(`${baseUrl}/api/reports${q}`, {
+      method: 'GET',
+      headers: defaultHeaders(authToken),
+    }), timeout);
+    return handleResponse(res);
+  };
+
   // Utility: safe parse for numbers from inputs (not required, but handy)
   const parseId = (maybeId) => {
     if (maybeId == null) return null;
@@ -206,6 +230,10 @@ const createClient = (initialBaseUrl = "/") => {
     listTransactions,
     getTransaction,
     createTransaction,
+    // reports API helpers
+    getReports,
+    getReportsRange,
+    // Utility: safe parse for numbers from inputs (not required, but handy)
     parseId,
   };
 };
