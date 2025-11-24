@@ -348,7 +348,7 @@ const OrderPage = ({
     }
 
     const txnIdForReceipt = (txnToAdd && txnToAdd.id != null) ? txnToAdd.id : nextTransactionId;
-    let receiptText = `*** Bean Machine Coffee ***\n`;
+    let receiptText = `*** KOPI SHAP Café ***\n`;
     receiptText += `Transaction ID: ${txnIdForReceipt}\n`;
     receiptText += `Customer ID: ${currentCustomer.id} (${(updatedCustomer.transactions) || 0} visits)\n`;
     receiptText += `Loyalty Status: ${loyalty}\n`;
@@ -384,7 +384,7 @@ const OrderPage = ({
     <div className="page-container">
       <div className="page-header">
         <section className="hero-banner">
-          <h2>The Code Cafe POS</h2>
+          <h2>The KOPI SHAP Café POS</h2>
           <div className="nav-buttons">
             <button className="nav-button" onClick={() => navigate('home')}>← Back to Home</button>
             <button className="nav-button" onClick={() => navigate('customers')}>Customer List</button>

@@ -83,36 +83,36 @@ const createClient = (initialBaseUrl = "/") => {
 
   // Customers
   const listCustomers = async () => {
-  const res = await withTimeout(fetch(`${baseUrl}/api/customers`, {
-    method: "GET",
-    headers: defaultHeaders(authToken),
-  }), timeout);
+    const res = await withTimeout(fetch(`${baseUrl}/api/customers`, {
+      method: "GET",
+      headers: defaultHeaders(authToken),
+    }), timeout);
 
-  const data = await handleResponse(res);
+    const data = await handleResponse(res);
 
-  // Unwrap common shapes:
-  // - server returns array -> return it
-  // - server returns { data: [...] } -> return data
-  // - server returns { customers: [...] } -> return customers
-  // - HAL style: { _embedded: { customers: [...] } } -> return that
-  // - otherwise, if it's an object whose values are customer-like, return values()
-  if (Array.isArray(data)) return data;
-  if (data && Array.isArray(data.data)) return data.data;
-  if (data && Array.isArray(data.customers)) return data.customers;
-  if (data && data._embedded && Array.isArray(data._embedded.customers)) return data._embedded.customers;
+    // Unwrap common shapes:
+    // - server returns array -> return it
+    // - server returns { data: [...] } -> return data
+    // - server returns { customers: [...] } -> return customers
+    // - HAL style: { _embedded: { customers: [...] } } -> return that
+    // - otherwise, if it's an object whose values are customer-like, return values()
+    if (Array.isArray(data)) return data;
+    if (data && Array.isArray(data.data)) return data.data;
+    if (data && Array.isArray(data.customers)) return data.customers;
+    if (data && data._embedded && Array.isArray(data._embedded.customers)) return data._embedded.customers;
 
-  // If API accidentally returned a single customer object, wrap into array
-  if (data && typeof data === 'object' && data.id != null && data.name != null) return [data];
+    // If API accidentally returned a single customer object, wrap into array
+    if (data && typeof data === 'object' && data.id != null && data.name != null) return [data];
 
-  // If it's an object map { "1": {..}, "2": {..} }, convert to array
-  if (data && typeof data === 'object') {
-    const vals = Object.values(data).filter(v => v && typeof v === 'object' && ('name' in v || 'contact' in v || 'transactions' in v || 'items' in v));
-    if (vals.length) return vals;
-  }
+    // If it's an object map { "1": {..}, "2": {..} }, convert to array
+    if (data && typeof data === 'object') {
+      const vals = Object.values(data).filter(v => v && typeof v === 'object' && ('name' in v || 'contact' in v || 'transactions' in v || 'items' in v));
+      if (vals.length) return vals;
+    }
 
-  // Fallback to empty array to keep UI stable
-  return [];
-};
+    // Fallback to empty array to keep UI stable
+    return [];
+  };
 
   const getCustomer = async (id) => {
     const res = await withTimeout(fetch(`${baseUrl}/api/customers/${id}`, {
@@ -150,11 +150,10 @@ const createClient = (initialBaseUrl = "/") => {
 
   // Transactions
   const listTransactions = async () => {
-    const res = await withTimeout(fetch(`${baseUrl}/api/transactions`, {
-      method: "GET",
-      headers: defaultHeaders(authToken),
-    }), timeout);
-    return handleResponse(res);
+    const res = await withTimeout(fetch(`${baseUrl}/api/transactions`), timeout);
+    const data = await handleResponse(res);
+    const arr = Array.isArray(data) ? data : (data && data.data) ? data.data : [];
+    return arr.map(normalizeTransaction);
   };
 
   const getTransaction = async (id) => {

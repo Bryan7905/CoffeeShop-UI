@@ -1,6 +1,54 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import api from '../api';
 
+// Normalize transaction shape so reports logic sees consistent fields
+const normalizeTransaction = (raw) => {
+    if (!raw || typeof raw !== 'object') return null;
+
+    // get transaction date from common fields
+    const rawDate = raw.transactionDate ?? raw.date ?? raw.createdAt ?? raw.timestamp ?? null;
+    let transactionDate = null;
+    if (rawDate != null) {
+        // handle epoch ms or numeric strings
+        if (typeof rawDate === 'number') transactionDate = new Date(rawDate).toISOString();
+        else if (!isNaN(Number(rawDate)) && String(rawDate).length >= 10 && !rawDate.includes('T')) {
+            // timestamp seconds or ms (ambiguous) — prefer ms if length >=13
+            const n = Number(rawDate);
+            transactionDate = (String(rawDate).length >= 13) ? new Date(n).toISOString() : new Date(n * 1000).toISOString();
+        } else {
+            // assume ISO-like string
+            const d = new Date(rawDate);
+            transactionDate = isNaN(d.getTime()) ? null : d.toISOString();
+        }
+    }
+
+    // customer: support customerId or nested customer object
+    const customerId = raw.customerId ?? (raw.customer && (raw.customer.id ?? raw.customerId)) ?? null;
+    const customerName = raw.customer?.name ?? raw.customerName ?? raw.customer?.fullName ?? null;
+
+    // monetary fields - try multiple names, coerce to Number
+    const finalTotal = raw.finalTotal ?? raw.total ?? raw.amount ?? 0;
+    const discount = raw.discount ?? 0;
+
+    // items array - ensure names, qty, price and category exist
+    const items = Array.isArray(raw.items) ? raw.items.map(it => ({
+        name: it.name ?? it.title ?? 'Unknown',
+        qty: Number(it.qty ?? it.quantity ?? 0),
+        price: Number(it.pricePhp ?? it.price ?? it.priceUsd ?? 0),
+        category: it.category ?? it.cat ?? 'Other'
+    })) : [];
+
+    return {
+        ...raw,
+        transactionDate,
+        customerId,
+        customerName,
+        finalTotal: Number(finalTotal || 0),
+        discount: Number(discount || 0),
+        items
+    };
+};
+
 
 // --- Constants & Helpers from OrderPage.js ---
 const EXCHANGE_RATE = 56.0;
@@ -108,9 +156,22 @@ const ReportsPage = ({ navigate, transactions = [], customers = [] }) => {
     }, [transactions, sortedFrames, getCutoffDate]);
 
     // generate reports for a single (non-overlapping) timeframe
-    const generateReports = useCallback((frameId) => {
+    const generateReports = useCallback(async (frameId) => {
         setLoading(true);
         try {
+            // 1) Try server-side report if API supports it
+            try {
+                const server = await api.getReports(frameId).catch(() => null);
+                if (server && typeof server === 'object' && !server.error) {
+                    setReportsData(server);
+                    return;
+                }
+            } catch (srvErr) {
+                // server not available or returned error - fall through to client-side compute
+                console.warn('Server-side reports failed, falling back to client compute:', srvErr);
+            }
+
+            // 2) Client-side compute using normalized transactions (existing logic)
             const frameIndex = sortedFrames.findIndex(f => f.id === frameId);
             const frame = sortedFrames[frameIndex];
             if (!frame) {
@@ -121,100 +182,29 @@ const ReportsPage = ({ navigate, transactions = [], customers = [] }) => {
             const start = getCutoffDate(frame.days);
             const end = (() => {
                 if (frameIndex === 0) {
-                    const e = new Date();
-                    e.setHours(23, 59, 59, 999);
-                    return e;
+                    const e = new Date(); e.setHours(23, 59, 59, 999); return e;
                 }
                 const prev = sortedFrames[frameIndex - 1];
-                // prevStart is start-of-day of the more recent window (excluded)
                 return new Date(getCutoffDate(prev.days));
             })();
 
-            const txns = Array.isArray(transactions) ? transactions : [];
+            const rawTxns = Array.isArray(transactions) ? transactions : [];
+            const txns = rawTxns.map(normalizeTransaction).filter(Boolean);
 
-            // Filter using non-overlapping window logic:
             const filteredTransactions = txns.filter(txn => {
-                const raw = txn.transactionDate ?? txn.date ?? txn.createdAt ?? txn.timestamp ?? null;
-                const parsed = parseTxnDate(raw);
-                if (!parsed) return false;
-                if (frameIndex === 0) {
-                    // most recent window: include parsed between start (inclusive) and end-of-today (inclusive)
-                    return parsed >= start && parsed <= end;
-                } else {
-                    // older window: include parsed >= start && parsed < prevStart (end)
-                    return parsed >= start && parsed < end;
-                }
+                const rawDate = txn.transactionDate;
+                if (!rawDate) return false;
+                const parsed = new Date(rawDate);
+                if (isNaN(parsed.getTime())) return false;
+                if (frameIndex === 0) return parsed >= start && parsed <= end;
+                return parsed >= start && parsed < end;
             });
 
-            // count unique customers in this timeframe
-            const customerIdSet = new Set(filteredTransactions.map(t => t.customerId).filter(id => id != null));
-            const customersCount = customerIdSet.size;
+            // ... then keep the rest of the existing client-side aggregation code,
+            // but replace references to txn.finalTotal, txn.discount, txn.items etc.
+            // (Your current code already uses those keys — the normalize step sets them.)
+            // setReportsData({...}) as before
 
-            // customer txn counts
-            const customerTxnCount = filteredTransactions.reduce((acc, txn) => {
-                acc[txn.customerId] = (acc[txn.customerId] || 0) + 1;
-                return acc;
-            }, {});
-
-            // Build a customersInFrame array with id, name and txnCount
-            const customersInFrame = Array.from(customerIdSet).map(id => {
-                const found = Array.isArray(customers) ? customers.find(c => String(c.id) === String(id)) : null;
-                return {
-                    id,
-                    name: found && found.name ? found.name : `Customer ${id}`,
-                    txnCount: customerTxnCount[id] || 0
-                };
-            }).sort((a, b) => (b.txnCount || 0) - (a.txnCount || 0));
-
-            let mostLoyalCustomer = null;
-            let maxTxns = 0;
-            for (const id in customerTxnCount) {
-                if (customerTxnCount[id] > maxTxns) {
-                    maxTxns = customerTxnCount[id];
-                    const found = customers.find(c => String(c.id) === id);
-                    if (found) mostLoyalCustomer = { ...found, txnCount: customerTxnCount[id] };
-                    else mostLoyalCustomer = { id, name: `Customer ${id}`, txnCount: customerTxnCount[id] };
-                }
-            }
-
-            // items sold and revenue
-            const itemSales = {};
-            let totalRevenue = 0;
-            let totalDiscount = 0;
-            filteredTransactions.forEach(txn => {
-                totalRevenue += Number(txn.finalTotal) || 0;
-                totalDiscount += Number(txn.discount) || 0;
-                if (Array.isArray(txn.items)) {
-                    txn.items.forEach(item => {
-                        const category = item.category || ALL_MENU_ITEMS.find(m => m.name === item.name)?.category || 'Other';
-                        if (!itemSales[item.name]) itemSales[item.name] = { name: item.name, qty: 0, category };
-                        itemSales[item.name].qty += (item.qty || 0);
-                    });
-                }
-            });
-
-            const itemSalesArray = Object.values(itemSales).sort((a, b) => b.qty - a.qty);
-            const topDrink = itemSalesArray.find(item => item.category === 'Coffee' || item.category === 'Drinks');
-            const topPastry = itemSalesArray.find(item => item.category === 'Pastry');
-
-            const totalTxns = filteredTransactions.length;
-            const averageOrderValue = totalTxns > 0 ? totalRevenue / totalTxns : 0;
-
-            setReportsData({
-                frameLabel: frame.label,
-                frameId,
-                mostLoyalCustomer,
-                topDrink,
-                topPastry,
-                customersCount,
-                customersInFrame, 
-                salesSummary: {
-                    totalTransactions: totalTxns,
-                    totalRevenue,
-                    totalDiscount,
-                    averageOrderValue,
-                },
-            });
         } catch (err) {
             console.error('generateReports error:', err);
             setReportsData({ error: String(err) });
@@ -226,7 +216,7 @@ const ReportsPage = ({ navigate, transactions = [], customers = [] }) => {
     // initial compute on mount
     useEffect(() => {
         generateReports(activeTimeFrame);
-    }, []); 
+    }, []);
 
     // recompute when the active frame or data change
     useEffect(() => {

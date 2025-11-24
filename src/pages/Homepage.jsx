@@ -5,7 +5,7 @@ const HomePage = ({ navigate }) => {
     return (
         <div className="page-container">
           <section className="hero-banner">
-            <h1>Welcome to Bean Machine Coffee Shop</h1>
+            <h1>Welcome to KOPI SHAP Café</h1>
             <p>Select an action to continue.</p>
             <button className="button" onClick={() => navigate('order')}>
                 Order
