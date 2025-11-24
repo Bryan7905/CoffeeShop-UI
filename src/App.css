@@ -718,6 +718,7 @@ th {
 .report-table td {
     padding: 8px 0;
     border-bottom: 1px dotted #eee;
+    text-align: left;
 }
 
 .report-table td:first-child {
