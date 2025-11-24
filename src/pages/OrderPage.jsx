@@ -13,28 +13,28 @@ const formatCurrency = (value) => {
 // Menu data - unchanged (prices are stored in USD here)
 const MENU_ITEMS_DATA = {
   Coffee: [
-    { name: 'Espresso', price: 3.50, category: 'Coffee' },
-    { name: 'Latte', price: 4.75, category: 'Coffee' },
-    { name: 'Cappuccino', price: 4.50, category: 'Coffee' },
-    { name: 'Americano', price: 3.25, category: 'Coffee' },
-    { name: 'Mocha', price: 5.00, category: 'Coffee' },
+    { name: 'Espresso', price: 2.04, category: 'Coffee' },
+    { name: 'Latte', price: 2.72, category: 'Coffee' },
+    { name: 'Cappuccino', price: 2.46, category: 'Coffee' },
+    { name: 'Americano', price: 2.21, category: 'Coffee' },
+    { name: 'Mocha', price: 2.38, category: 'Coffee' },
   ],
   Pastry: [
-    { name: 'Croissant', price: 3.00, category: 'Pastry' },
-    { name: 'Muffin', price: 3.50, category: 'Pastry' },
+    { name: 'Croissant', price: 2.55, category: 'Pastry' },
+    { name: 'Muffin', price: 2.21, category: 'Pastry' },
   ],
   'Cake/Bread': [
-    { name: 'Chocolate Cake Slice', price: 4.50, category: 'Cake/Bread' },
-    { name: 'Banana Bread', price: 3.00, category: 'Cake/Bread' },
+    { name: 'Chocolate Cake Slice', price: 2.63, category: 'Cake/Bread' },
+    { name: 'Banana Bread', price: 2.21, category: 'Cake/Bread' },
   ],
   Drinks: [
-    { name: 'Canned Soda', price: 2.00, category: 'Drinks' },
-    { name: 'Mango Smoothie', price: 4.50, category: 'Drinks' },
-    { name: 'Bottled Water', price: 1.50, category: 'Drinks' },
+    { name: 'Canned Soda', price: 1.19, category: 'Drinks' },
+    { name: 'Mango Smoothie', price: 2.04, category: 'Drinks' },
+    { name: 'Bottled Water', price: 0.68, category: 'Drinks' },
   ],
   Food: [
-    { name: 'Chicken Pesto Pasta', price: 10.00, category: 'Food' },
-    { name: 'Beef Lasagna', price: 12.00, category: 'Food' },
+    { name: 'Chicken Pesto Pasta', price: 3.38, category: 'Food' },
+    { name: 'Beef Lasagna', price: 3.48, category: 'Food' },
   ],
 };
 

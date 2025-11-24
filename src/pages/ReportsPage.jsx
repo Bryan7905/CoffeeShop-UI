@@ -123,31 +123,27 @@ const ReportsPage = ({ navigate, transactions = [], customers = [] }) => {
 
     // compute counts per frame (non-overlapping) - optional, used to show badges/counts
     const countsPerFrame = useMemo(() => {
-        const txns = Array.isArray(transactions) ? transactions : [];
+        // normalize incoming transactions so different shapes all count
+        const rawTxns = Array.isArray(transactions) ? transactions : [];
+        const txns = rawTxns.map(normalizeTransaction).filter(Boolean);
+
         return sortedFrames.map((frame, idx) => {
             const start = getCutoffDate(frame.days);
             const end = (() => {
                 if (idx === 0) {
-                    // most recent window: up to end of today
-                    const e = new Date();
-                    e.setHours(23, 59, 59, 999);
-                    return e;
+                    const e = new Date(); e.setHours(23, 59, 59, 999); return e;
                 }
                 const prev = sortedFrames[idx - 1];
-                // transactions must be strictly older than prev's start-of-day
-                return new Date(getCutoffDate(prev.days)); // start-of-day of prev window
+                return new Date(getCutoffDate(prev.days));
             })();
 
             let count = 0;
             for (const txn of txns) {
-                const raw = txn.transactionDate ?? txn.date ?? txn.createdAt ?? txn.timestamp ?? null;
-                const parsed = parseTxnDate(raw);
-                if (!parsed) continue;
-                // normalize to time for comparison
+                const parsed = txn.transactionDate ? new Date(txn.transactionDate) : null;
+                if (!parsed || isNaN(parsed.getTime())) continue;
                 if (idx === 0) {
                     if (parsed >= start && parsed <= end) count++;
                 } else {
-                    // exclude the more recent window: parsed >= start && parsed < prevStart
                     if (parsed >= start && parsed < end) count++;
                 }
             }
@@ -251,10 +247,10 @@ const ReportsPage = ({ navigate, transactions = [], customers = [] }) => {
             <>
 
                 {/* New: list all customer names who purchased in this timeframe */}
-                <section className="report-card" style={{ marginBottom: 12 }}>
+                <section className="report-card" style={{marginBottom: 12, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                     <h3>Customers in Period</h3>
                     {customersInFrame && customersInFrame.length > 0 ? (
-                        <ul style={{ margin: 0, paddingLeft: 18 }}>
+                        <ul style={{ margin: 0, paddingLeft: 18, listStyle: 'none', textAlign: 'center', width: '100%', maxWidth: 520 }}>
                             {customersInFrame.map(c => (
                                 <li key={String(c.id)} style={{ marginBottom: 6 }}>
                                     <strong>{c.name}</strong> <span style={{ color: '#666' }}>(ID: {c.id})</span>
