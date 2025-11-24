@@ -448,24 +448,7 @@ const ReportsPage = ({ navigate, transactions = [], customers = [] }) => {
                     })}
                 </div>
             </div>
-
-            {/* Debug toggle & panel (dev only) */}
-            <div style={{ marginTop: 12 }}>
-                <button className="button" onClick={() => setDebugVisible(v => !v)} style={{ marginBottom: 8 }}>Toggle Reports Debug</button>
-                {debugVisible && (
-                    <div style={{ background: '#fff8e6', border: '1px solid #e6d6b8', padding: 12, borderRadius: 6 }}>
-                        <div><strong>Debug</strong></div>
-                        <div>Raw transactions: {debugData.rawCount}</div>
-                        <div>Normalized transactions: {debugData.normalizedCount}</div>
-                        <div>Frame counts: {debugData.frames.map(f => `${f.id}:${f.count}`).join(', ')}</div>
-                        <div style={{ marginTop: 6 }}><em>Sample dates (normalized):</em></div>
-                        <ul style={{ margin: 0, paddingLeft: 16 }}>
-                            {debugData.sampleDates.map((d, i) => <li key={i} style={{ fontSize: '0.9em' }}>{d}</li>)}
-                        </ul>
-                    </div>
-                )}
-            </div>
-
+            
             <div className="reports-grid">
                 {reportContent}
             </div>
