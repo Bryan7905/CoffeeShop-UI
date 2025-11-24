@@ -89,6 +89,7 @@ const ReportsPage = ({ navigate, transactions = [], customers = [] }) => {
     const [activeTimeFrame, setActiveTimeFrame] = useState(TIME_FRAMES[0].id);
     const [reportsData, setReportsData] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [debugVisible, setDebugVisible] = useState(false);
 
     // Safe parse helper - returns Date or null
     const parseTxnDate = (raw) => {
@@ -168,6 +169,14 @@ const ReportsPage = ({ navigate, transactions = [], customers = [] }) => {
         // eslint-disable-next-line no-console
         console.warn('ReportsPage debug log failed', dbgErr);
     }
+
+    // UI-visible debug data (useful when console not available)
+    const debugData = useMemo(() => {
+        const raw = Array.isArray(transactions) ? transactions : [];
+        const norm = raw.map(normalizeTransaction).filter(Boolean);
+        const frames = countsPerFrame.map(f => ({ id: f.id, count: f.count }));
+        return { rawCount: raw.length, normalizedCount: norm.length, frames, sampleDates: norm.slice(0, 10).map(t => t.transactionDate) };
+    }, [transactions, countsPerFrame]);
 
     // generate reports for a single (non-overlapping) timeframe
     const generateReports = useCallback(async (frameId) => {
@@ -396,6 +405,23 @@ const ReportsPage = ({ navigate, transactions = [], customers = [] }) => {
                         );
                     })}
                 </div>
+            </div>
+
+            {/* Debug toggle & panel (dev only) */}
+            <div style={{ marginTop: 12 }}>
+                <button className="button" onClick={() => setDebugVisible(v => !v)} style={{ marginBottom: 8 }}>Toggle Reports Debug</button>
+                {debugVisible && (
+                    <div style={{ background: '#fff8e6', border: '1px solid #e6d6b8', padding: 12, borderRadius: 6 }}>
+                        <div><strong>Debug</strong></div>
+                        <div>Raw transactions: {debugData.rawCount}</div>
+                        <div>Normalized transactions: {debugData.normalizedCount}</div>
+                        <div>Frame counts: {debugData.frames.map(f => `${f.id}:${f.count}`).join(', ')}</div>
+                        <div style={{ marginTop: 6 }}><em>Sample dates (normalized):</em></div>
+                        <ul style={{ margin: 0, paddingLeft: 16 }}>
+                            {debugData.sampleDates.map((d, i) => <li key={i} style={{ fontSize: '0.9em' }}>{d}</li>)}
+                        </ul>
+                    </div>
+                )}
             </div>
 
             <div className="reports-grid">
