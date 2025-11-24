@@ -384,9 +384,9 @@ const ReportsPage = ({ navigate, transactions = [], customers = [] }) => {
                     ) : <p>No pastries sold in this period.</p>}
                 </section>
 
-                <section className="report-card full-width" style={{ marginBottom: 12, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                    <h3>Sales Summary</h3>
-                    <table className="report-table" style={{ textAlign: 'left' }}>
+                <section className="report-card full-width">
+                    <h3 style={{ textAlign: 'center' }}>Sales Summary</h3>
+                    <table className="report-table">
                         <tbody>
                             <tr><td>Total Transactions</td><td style={{ textAlign: 'right' }}><strong>{salesSummary.totalTransactions}</strong></td></tr>
                             <tr><td>Total Revenue (Final Total)</td><td style={{ textAlign: 'right' }}><strong>{formatCurrency(salesSummary.totalRevenue)}</strong></td></tr>
