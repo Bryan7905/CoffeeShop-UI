@@ -90,6 +90,8 @@ const ReportsPage = ({ navigate, transactions = [], customers = [] }) => {
     const [reportsData, setReportsData] = useState(null);
     const [loading, setLoading] = useState(false);
     const [debugVisible, setDebugVisible] = useState(false);
+    const [serverCounts, setServerCounts] = useState(null);
+    const [serverCountsLoading, setServerCountsLoading] = useState(false);
 
     // Safe parse helper - returns Date or null
     const parseTxnDate = (raw) => {
@@ -277,6 +279,36 @@ const ReportsPage = ({ navigate, transactions = [], customers = [] }) => {
         generateReports(activeTimeFrame);
     }, [activeTimeFrame, transactions, customers, generateReports]);
 
+    // Fetch server-side counts for all frames on mount so badges can show authoritative totals
+    useEffect(() => {
+        let mounted = true;
+        const load = async () => {
+            setServerCountsLoading(true);
+            try {
+                const promises = sortedFrames.map(async (f) => {
+                    try {
+                        const res = await api.getReports(f.id);
+                        const count = res && res.salesSummary && typeof res.salesSummary.totalTransactions === 'number'
+                            ? res.salesSummary.totalTransactions
+                            : null;
+                        return { id: f.id, count };
+                    } catch (e) {
+                        return { id: f.id, count: null };
+                    }
+                });
+                const results = await Promise.all(promises);
+                if (!mounted) return;
+                const map = {};
+                results.forEach(r => { if (r.count != null) map[r.id] = r.count; });
+                setServerCounts(map);
+            } finally {
+                if (mounted) setServerCountsLoading(false);
+            }
+        };
+        load();
+        return () => { mounted = false; };
+    }, [sortedFrames]);
+
     const reportContent = useMemo(() => {
         if (loading) return <div>Calculating reports...</div>;
         if (!reportsData) return <div>Select a time frame to generate reports.</div>;
@@ -386,7 +418,9 @@ const ReportsPage = ({ navigate, transactions = [], customers = [] }) => {
                 <h3>Select Time Frame:</h3>
                 <div className="time-frame-selector" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                     {sortedFrames.map(frame => {
-                        const badge = countsPerFrame.find(b => b.id === frame.id)?.count ?? 0;
+                        // prefer server-provided counts if available, otherwise use client-side counts
+                        const clientBadge = countsPerFrame.find(b => b.id === frame.id)?.count ?? 0;
+                        const badge = (serverCounts && typeof serverCounts[frame.id] === 'number') ? serverCounts[frame.id] : clientBadge;
                         return (
                             <button
                                 key={frame.id}
