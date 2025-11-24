@@ -392,10 +392,12 @@ const ReportsPage = ({ navigate, transactions = [], customers = [] }) => {
                             <tr><td>Total Revenue (Final Total)</td><td style={{ textAlign: 'right' }}><strong>{formatCurrency(salesSummary.totalRevenue)}</strong></td></tr>
                             <tr><td>Total Discount Given</td><td style={{ textAlign: 'right' }}>{formatCurrency(salesSummary.totalDiscount)}</td></tr>
                             <tr><td>Average Order Value (AOV)</td><td style={{ textAlign: 'right' }}>{formatCurrency(salesSummary.averageOrderValue)}</td></tr>
+                            <tr style={{ marginBottom: 8, color: '#333', textAlign: 'left' }}>
+                            <td>Transactions in frame:</td>
+                                <td style={{ textAlign: 'right' }}>{salesSummary.totalTransactions} — Customers: {customersCount}</td>
+                            </tr>
                         </tbody>
-                        <div style={{ marginBottom: 8, color: '#333', textAlign: 'left' }}>
-                            Transactions in frame: {salesSummary.totalTransactions} — Customers: {customersCount}
-                        </div>
+                        
 
                     </table>
                 </section>
