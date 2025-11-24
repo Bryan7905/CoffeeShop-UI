@@ -388,10 +388,10 @@ const ReportsPage = ({ navigate, transactions = [], customers = [] }) => {
                     <h3 style={{ textAlign: 'center' }}>Sales Summary</h3>
                     <table className="report-table">
                         <tbody>
-                            <tr><td>Total Transactions</td><td style={{ textAlign: 'right' }}><strong>{salesSummary.totalTransactions}</strong></td></tr>
-                            <tr><td>Total Revenue (Final Total)</td><td style={{ textAlign: 'right' }}><strong>{formatCurrency(salesSummary.totalRevenue)}</strong></td></tr>
-                            <tr><td>Total Discount Given</td><td style={{ textAlign: 'right' }}>{formatCurrency(salesSummary.totalDiscount)}</td></tr>
-                            <tr><td>Average Order Value (AOV)</td><td style={{ textAlign: 'right' }}>{formatCurrency(salesSummary.averageOrderValue)}</td></tr>
+                            <tr><td style={{ textAlign: 'left' }}>Total Transactions</td><td style={{ textAlign: 'right' }}><strong>{salesSummary.totalTransactions}</strong></td></tr>
+                            <tr><td style={{ textAlign: 'left' }}>Total Revenue (Final Total)</td><td style={{ textAlign: 'right' }}><strong>{formatCurrency(salesSummary.totalRevenue)}</strong></td></tr>
+                            <tr><td style={{ textAlign: 'left' }}>Total Discount Given</td><td style={{ textAlign: 'right' }}>{formatCurrency(salesSummary.totalDiscount)}</td></tr>
+                            <tr><td style={{ textAlign: 'left' }}>Average Order Value (AOV)</td><td style={{ textAlign: 'right' }}>{formatCurrency(salesSummary.averageOrderValue)}</td></tr>
                         </tbody>
                         <div style={{ marginBottom: 8, color: '#333' }}>
                             Transactions in frame: {salesSummary.totalTransactions} — Customers: {customersCount}
