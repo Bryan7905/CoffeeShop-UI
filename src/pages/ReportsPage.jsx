@@ -353,7 +353,7 @@ const ReportsPage = ({ navigate, transactions = [], customers = [] }) => {
                     )}
                 </section>
 
-                <section className="report-card">
+                <section className="report-card" style={{ marginBottom: 12, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                     <h3>Most Loyal Customer</h3>
                     {mostLoyalCustomer ? (
                         <div>
@@ -364,7 +364,7 @@ const ReportsPage = ({ navigate, transactions = [], customers = [] }) => {
                     ) : <p>No transactions recorded in this period.</p>}
                 </section>
 
-                <section className="report-card">
+                <section className="report-card" style={{ marginBottom: 12, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                     <h3>Most Bought Drink</h3>
                     {topDrink ? (
                         <div>
@@ -374,7 +374,7 @@ const ReportsPage = ({ navigate, transactions = [], customers = [] }) => {
                     ) : <p>No drinks sold in this period.</p>}
                 </section>
 
-                <section className="report-card">
+                <section className="report-card" style={{ marginBottom: 12, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                     <h3>Most Bought Pastry</h3>
                     {topPastry ? (
                         <div>
@@ -384,7 +384,7 @@ const ReportsPage = ({ navigate, transactions = [], customers = [] }) => {
                     ) : <p>No pastries sold in this period.</p>}
                 </section>
 
-                <section className="report-card full-width">
+                <section className="report-card full-width" style={{ marginBottom: 12, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                     <h3>Sales Summary</h3>
                     <table className="report-table">
                         <tbody>
