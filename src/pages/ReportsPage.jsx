@@ -154,6 +154,29 @@ const ReportsPage = ({ navigate, transactions = [], customers = [] }) => {
     // generate reports for a single (non-overlapping) timeframe
     const generateReports = useCallback(async (frameId) => {
         setLoading(true);
+
+        // debug: print raw and normalized counts for inspection
+        try {
+            const rawTxns = Array.isArray(transactions) ? transactions : [];
+            const normalized = rawTxns.map(normalizeTransaction).filter(Boolean);
+            console.log('DEBUG raw txns:', rawTxns.length);
+            console.log('DEBUG normalized txns:', normalized.length);
+            console.log('DEBUG sample normalized:', normalized.slice(0, 5));
+            const start = getCutoffDate(7);
+            const end = new Date(); end.setHours(23, 59, 59, 999);
+            const last7 = normalized.filter(tx => {
+                if (!tx || !tx.transactionDate) return false;
+                const d = new Date(tx.transactionDate);
+                if (isNaN(d.getTime())) return false;
+                return d >= start && d <= end;
+            });
+            console.log('DEBUG last7 count:', last7.length);
+            // show ISO dates to make parsing issues obvious
+            console.table(last7.map(t => ({ id: t.id ?? t.transactionId ?? '(no id)', date: t.transactionDate })));
+        } catch (dbgErr) {
+            console.warn('Reports debug error', dbgErr);
+        }
+
         try {
             // 1) Try server-side report if API supports it
             try {
@@ -247,7 +270,7 @@ const ReportsPage = ({ navigate, transactions = [], customers = [] }) => {
             <>
 
                 {/* New: list all customer names who purchased in this timeframe */}
-                <section className="report-card" style={{marginBottom: 12, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <section className="report-card" style={{ marginBottom: 12, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                     <h3>Customers in Period</h3>
                     {customersInFrame && customersInFrame.length > 0 ? (
                         <ul style={{ margin: 0, paddingLeft: 18, listStyle: 'none', textAlign: 'center', width: '100%', maxWidth: 520 }}>

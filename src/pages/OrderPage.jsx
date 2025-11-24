@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import api from '../api'; // use direct API for customer / transaction fetch/update when needed
 
 // Exchange / formatting settings (adjust EXCHANGE_RATE to match current USD → PHP rate)
-const EXCHANGE_RATE = 56.0; // 1 USD = 56 PHP (change this to your preferred/current rate)
+const EXCHANGE_RATE = 1.0; // 1 USD = 56 PHP (change this to your preferred/current rate)
 const LOCALE = 'en-PH';
 const CURRENCY = 'PHP';
 
@@ -13,28 +13,28 @@ const formatCurrency = (value) => {
 // Menu data - unchanged (prices are stored in USD here)
 const MENU_ITEMS_DATA = {
   Coffee: [
-    { name: 'Espresso', price: 2.04, category: 'Coffee' },
-    { name: 'Latte', price: 2.72, category: 'Coffee' },
-    { name: 'Cappuccino', price: 2.46, category: 'Coffee' },
-    { name: 'Americano', price: 2.21, category: 'Coffee' },
-    { name: 'Mocha', price: 2.38, category: 'Coffee' },
+    { name: 'Espresso', price: 120, category: 'Coffee' },
+    { name: 'Latte', price: 160, category: 'Coffee' },
+    { name: 'Cappuccino', price: 145, category: 'Coffee' },
+    { name: 'Americano', price: 130, category: 'Coffee' },
+    { name: 'Mocha', price: 140, category: 'Coffee' },
   ],
   Pastry: [
-    { name: 'Croissant', price: 2.55, category: 'Pastry' },
-    { name: 'Muffin', price: 2.21, category: 'Pastry' },
+    { name: 'Croissant', price: 150, category: 'Pastry' },
+    { name: 'Muffin', price: 130, category: 'Pastry' },
   ],
   'Cake/Bread': [
-    { name: 'Chocolate Cake Slice', price: 2.63, category: 'Cake/Bread' },
-    { name: 'Banana Bread', price: 2.21, category: 'Cake/Bread' },
+    { name: 'Chocolate Cake Slice', price: 155, category: 'Cake/Bread' },
+    { name: 'Banana Bread', price: 130, category: 'Cake/Bread' },
   ],
   Drinks: [
-    { name: 'Canned Soda', price: 1.19, category: 'Drinks' },
-    { name: 'Mango Smoothie', price: 2.04, category: 'Drinks' },
-    { name: 'Bottled Water', price: 0.68, category: 'Drinks' },
+    { name: 'Canned Soda', price: 70, category: 'Drinks' },
+    { name: 'Mango Smoothie', price: 120, category: 'Drinks' },
+    { name: 'Bottled Water', price: 40, category: 'Drinks' },
   ],
   Food: [
-    { name: 'Chicken Pesto Pasta', price: 3.38, category: 'Food' },
-    { name: 'Beef Lasagna', price: 3.48, category: 'Food' },
+    { name: 'Chicken Pesto Pasta', price: 199, category: 'Food' },
+    { name: 'Beef Lasagna', price: 205, category: 'Food' },
   ],
 };
 
