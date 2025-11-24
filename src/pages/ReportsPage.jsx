@@ -150,6 +150,24 @@ const ReportsPage = ({ navigate, transactions = [], customers = [] }) => {
             return { id: frame.id, count };
         });
     }, [transactions, sortedFrames, getCutoffDate]);
+    // debug: helpful console output to inspect why badges may be zero
+    try {
+        // avoid noisy logs in production
+        if (typeof window !== 'undefined' && window && process && process.env && process.env.NODE_ENV !== 'production') {
+            const rawTxnsDbg = Array.isArray(transactions) ? transactions : [];
+            const normDbg = rawTxnsDbg.map(normalizeTransaction).filter(Boolean);
+            const frameCountsDbg = countsPerFrame.map(f => ({ frame: f.id, count: f.count }));
+            // Print a compact summary
+            // eslint-disable-next-line no-console
+            console.debug('ReportsPage DEBUG: rawTxns', rawTxnsDbg.length, 'normalized', normDbg.length, 'frameCounts', frameCountsDbg);
+            // show sample of normalized dates for quick inspection
+            // eslint-disable-next-line no-console
+            console.debug('ReportsPage DEBUG sample normalized dates:', normDbg.slice(0, 8).map(t => t.transactionDate));
+        }
+    } catch (dbgErr) {
+        // eslint-disable-next-line no-console
+        console.warn('ReportsPage debug log failed', dbgErr);
+    }
 
     // generate reports for a single (non-overlapping) timeframe
     const generateReports = useCallback(async (frameId) => {
