@@ -148,9 +148,17 @@ const ReportsPage = ({ navigate, transactions = [], customers = [] }) => {
                     if (parsed >= start && parsed < end) count++;
                 }
             }
+            // If we have server-generated reports for the active frame, prefer that authoritative count
+            try {
+                if (reportsData && reportsData.frameId === frame.id && reportsData.salesSummary && typeof reportsData.salesSummary.totalTransactions === 'number') {
+                    count = Number(reportsData.salesSummary.totalTransactions) || count;
+                }
+            } catch (e) {
+                // ignore
+            }
             return { id: frame.id, count };
         });
-    }, [transactions, sortedFrames, getCutoffDate]);
+    }, [transactions, sortedFrames, getCutoffDate, reportsData]);
     // debug: helpful console output to inspect why badges may be zero
     try {
         // avoid noisy logs in production
